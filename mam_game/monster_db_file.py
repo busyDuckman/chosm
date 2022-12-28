@@ -9,7 +9,7 @@ from PIL import Image
 
 from game_engine.dice import Dice, Roll
 from game_engine.game_engine import NPCType, DamageType, NPCBehaviour, Attack
-from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError
+from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, RawFile
 from mam_game.mam_file import MAMFile
 import helpers.pil_image_helpers as pih
 import helpers.stream_helpers as sh
@@ -24,7 +24,7 @@ class MonsterDBFile(MAMFile):
         return f"Binary File: id={self.file_id} len={len(self.data)}"
 
     def get_type_name(self):
-        return "binary"
+        return "mondb"
 
     def _get_bake_dict(self):
         info = super()._get_bake_dict()
@@ -132,12 +132,13 @@ def _get_luts():
     return target_pri, mon_type_lut, att_type_lut, att_special_lut
 
 
-def load_monster_database_file(file_id: int, file_name: str, data: List,
+def load_monster_database_file(raw_file: RawFile,
                   ver: MAMVersion, platform: Platform) -> MonsterDBFile:
+    data = raw_file.data
     if len(data) == 0:
-        raise MAMFileParseError(file_id, file_name, "Monster file was empty")
+        raise MAMFileParseError(raw_file, "Monster file was empty")
     if len(data) % 60 != 0:
-        raise MAMFileParseError(file_id, file_name, "Monster file must be a multiple of 60byte records")
+        raise MAMFileParseError(raw_file, "Monster file must be a multiple of 60byte records")
 
     target_pri, mon_type_lut, att_type_lut, att_special_lut = _get_luts()
 
@@ -145,7 +146,7 @@ def load_monster_database_file(file_id: int, file_name: str, data: List,
 
     monsters = []
     num_monsters = len(data) // 60
-    logging.info(f"Loading monsters: n={num_monsters}, file={file_name}")
+    logging.info(f"Loading monsters: n={num_monsters}, file={raw_file}")
     for i in range(num_monsters):
         npc_name = sh.read_string(f, size=16)  # 16 bytes name
         # Referencing a binary dump of the 35 byte stats record for the "whirlwind" monster
@@ -160,7 +161,7 @@ def load_monster_database_file(file_id: int, file_name: str, data: List,
         if hates in target_pri:
             hates = target_pri[hates]
         else:
-            logging.error(f"unknown target priority file={file_name}, npc={npc_name}, hates={hates:08b}")
+            logging.error(f"unknown target priority file={raw_file}, npc={npc_name}, hates={hates:08b}")
             hates = "all"
 
         # next 8 bytes
@@ -171,10 +172,10 @@ def load_monster_database_file(file_id: int, file_name: str, data: List,
             = sh.read_list(f, "uint16,byte,byte,byte,byte,byte,byte")
 
         if not (0 < num_dice <= 5000):
-            logging.error(f"invalid number of dice: file={file_name}, npc={npc_name}, num_dice={num_dice}")
+            logging.error(f"invalid number of dice: file={raw_file}, npc={npc_name}, num_dice={num_dice}")
 
         if dice_sides == 0:
-            logging.error(f"invalid dice sides: file={file_name}, npc={npc_name}, dice_sides={dice_sides}")
+            logging.error(f"invalid dice sides: file={raw_file}, npc={npc_name}, dice_sides={dice_sides}")
 
         # if hit_chance == 0:
         #     logging.error(f"Bad hit chance: file={file_name}, npc={npc_name}, hit_chance={hit_chance}")
@@ -182,23 +183,23 @@ def load_monster_database_file(file_id: int, file_name: str, data: List,
         # TODO: No idea on hot chance
 
         if attack_special not in att_special_lut:
-            logging.error(f"unknown special attack: file={file_name}, npc={npc_name}, attack_special={attack_special}")
+            logging.error(f"unknown special attack: file={raw_file}, npc={npc_name}, attack_special={attack_special}")
             attack_special = att_special_lut[0]
         else:
             attack_special = att_special_lut[attack_special]
 
         if attack_type not in att_type_lut:
-            logging.error(f"unknown attack type: file={file_name}, npc={npc_name}, attack_type={attack_type}")
+            logging.error(f"unknown attack type: file={raw_file}, npc={npc_name}, attack_type={attack_type}")
             attack_type = att_type_lut[0]
         else:
             attack_type = att_type_lut[attack_type]
 
         if ranged_attack not in [0, 1]:
-            logging.error(f"unknown ranged_attack: file={file_name}, npc={npc_name}, ranged_attack={ranged_attack}")
+            logging.error(f"unknown ranged_attack: file={raw_file}, npc={npc_name}, ranged_attack={ranged_attack}")
         ranged_attack = bool(ranged_attack)
 
         if type_id not in mon_type_lut:
-            logging.error(f"unknown monster type: file={file_name}, npc={npc_name}, type_id={type_id}")
+            logging.error(f"unknown monster type: file={raw_file}, npc={npc_name}, type_id={type_id}")
             mon_type = mon_type_lut[0]
         else:
             mon_type = mon_type_lut[type_id]
@@ -219,21 +220,21 @@ def load_monster_database_file(file_id: int, file_name: str, data: List,
         # todo: anim_fx_id = sprite_sfx_lut[anim_fx_id]
 
         if not (0 <= flying <= 1):
-            raise MAMFileParseError(file_id, file_name, "flying flag must be 0 or 1")
+            raise MAMFileParseError(raw_file, "flying flag must be 0 or 1")
         flying = bool(flying)
 
         if unknown != 0:
-            logging.warning(f"Unused(?) value[#1] no set: file={file_name}, npc={npc_name}, value={unknown}")
+            logging.warning(f"Unused(?) value[#1] no set: file={raw_file}, npc={npc_name}, value={unknown}")
 
         sh.read_dict(f, [])
         attack_snd = sh.read_string(f, size=8)
         if len(attack_snd) == 0:
-            logging.warning(f"no attack sound: file={file_name}, npc={npc_name}, value={unknown}")
+            logging.warning(f"no attack sound: file={raw_file}, npc={npc_name}, value={unknown}")
         attack_snd += ".voc"
 
         last_byte = sh.read_byte(f)
         if last_byte != 0:
-            logging.warning(f"Unused(?) value[#2] no set: file={file_name}, npc={npc_name}, value={unknown}")
+            logging.warning(f"Unused(?) value[#2] no set: file={raw_file}, npc={npc_name}, value={unknown}")
             exit(1)
 
         behaviour = NPCBehaviour(is_monster=True, can_swim=False, can_walk=True, can_fly=flying,
@@ -248,4 +249,4 @@ def load_monster_database_file(file_id: int, file_name: str, data: List,
 
         monsters.append(npc)
 
-    return MonsterDBFile(file_id, file_name, monsters)
+    return MonsterDBFile(raw_file.file_id, raw_file.file_name, monsters)

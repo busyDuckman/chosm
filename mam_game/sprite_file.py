@@ -13,7 +13,7 @@ from PIL import Image
 
 import helpers.pil_image_helpers as pih
 from helpers.misc import is_continuous_integers
-from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError
+from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, RawFile
 from mam_game.mam_file import MAMFile
 import helpers.stream_helpers as sh
 import helpers.color as ch
@@ -182,24 +182,24 @@ class SpriteFile(MAMFile):
         #  output.webp
 
 
-def read_cell(f, file_id: int, f_name: str):
+def read_cell(f, raw_file: RawFile):
     fmt = [sh.DType.U_INT_16, sh.DType.U_INT_16, sh.DType.U_INT_16, sh.DType.U_INT_16]
     x, width, y, height = [q.read(f) for q in fmt]
 
     # validate
     if not(0 <= x < 1024):
-        raise MAMFileParseError(file_id, f_name, f"Invalid Frame Cell: condition='0 <= x < 1024', x={x}")
+        raise MAMFileParseError(raw_file, f"Invalid Frame Cell: condition='0 <= x < 1024', x={x}")
     if not(0 <= y < 1024):
-        raise MAMFileParseError(file_id, f_name, f"Invalid Frame Cell: condition='0 <= y < 1024', y={y}")
+        raise MAMFileParseError(raw_file, f"Invalid Frame Cell: condition='0 <= y < 1024', y={y}")
     if not(0 < width < 1024):
-        raise MAMFileParseError(file_id, f_name, f"Invalid Frame Cell: condition='0 < width < 1024', width={width}")
+        raise MAMFileParseError(raw_file, f"Invalid Frame Cell: condition='0 < width < 1024', width={width}")
     if not(0 < height < 1024):
-        raise MAMFileParseError(file_id, f_name, f"Invalid Frame Cell: condition='0 < height < 1024', height={height}")
+        raise MAMFileParseError(raw_file, f"Invalid Frame Cell: condition='0 < height < 1024', height={height}")
 
     return x, y, width, height
 
 
-def decode_line(f, f_end, file_id: int, f_name: str):
+def decode_line(f, f_end, raw_file: RawFile):
     # Note: using naming conventions consistent with the source doco
     pixels = []
     line_offset = sh.read_byte(f)
@@ -258,7 +258,7 @@ def decode_line(f, f_end, file_id: int, f_name: str):
 
 
 def decode_cell_image(f, cell, pal: PalFile,
-                      file_id: int, f_name: str,
+                      raw_file: RawFile,
                       ver: MAMVersion, platform: Platform) -> Image.Image:
     # https://github.com/busyDuckman/OpenXeen/blob/ffb78839bcdd49d8fa1fd7002b5b0f5e2146ce57/src/main/java/mamFiles/WOX/WOXSpriteFile.java#L23
     # https://xeen.fandom.com/wiki/Sprite_File_Format
@@ -280,14 +280,14 @@ def decode_cell_image(f, cell, pal: PalFile,
                 next(y_iter)
             continue
         else:
-            pixels, line_offset = decode_line(f, f_end, file_id, f_name)
+            pixels, line_offset = decode_line(f, f_end, raw_file)
             for i, p in enumerate(pixels):
                 if p != transparent_index:
                     x_pos = x_offset + line_offset + i
                     img.putpixel((x_pos, y_pos), pal.colors_rgb[p])
 
             if f.tell() != f_end:
-                raise MAMFileParseError(file_id, f_name, f"Sprite line error: decoded line not of stated size.")
+                raise MAMFileParseError(raw_file, f"Sprite line error: decoded line not of stated size.")
 
 
 
@@ -330,29 +330,29 @@ def get_animations_in_ccfile_sprite(f_name, num_frames, ms_per_frame,
     return [AnimLoop("idle", frame_list, ms_per_frame, True)]
 
 
-def load_sprite_file(file_id: int, f_name: str, data: List, pal: PalFile,
+def load_sprite_file(raw_file: RawFile, pal: PalFile,
                   ver: MAMVersion, platform: Platform) -> SpriteFile:
-    f = io.BytesIO(bytearray(data))
+    f = io.BytesIO(bytearray(raw_file.data))
 
     # get the number of frames
     num_frames = sh.read_uint16(f)
     if not (0 < num_frames < 1024):
-        raise MAMFileParseError(file_id, f_name, f"Invalid sprite: condition='0 < num_frames < 1024', num_frames={num_frames}")
+        raise MAMFileParseError(raw_file, f"Invalid sprite: condition='0 < num_frames < 1024', num_frames={num_frames}")
 
     # Pairs of 16bit offsets for n * 4 cells.from
     # Each frame is a combination of up to two cells - one drawn over top the other.
     # The first offset is never zero, second being zero indicates one cell in the frame.
     cell_offsets = sh.read_uint16_array(f, num_frames*2)
     unique_offsets = [x for x in sorted(list(set(cell_offsets))) if x != 0]
-    if any(x > len(data) for x in unique_offsets):
-        raise MAMFileParseError(file_id, f_name, f"Invalid sprite: cell offset after end of file.")
+    if any(x > len(raw_file.data) for x in unique_offsets):
+        raise MAMFileParseError(raw_file, f"Invalid sprite: cell offset after end of file.")
 
     # load the cells
     cell_image_lut: Dict[int, Tuple[Any, Image.Image]] = {}
     for offset in unique_offsets:
         f.seek(offset)
-        cell = read_cell(f, file_id, f_name)
-        cell_image = decode_cell_image(f, cell, pal, file_id, f_name, ver, platform)
+        cell = read_cell(f, raw_file)
+        cell_image = decode_cell_image(f, cell, pal, raw_file, ver, platform)
         cell_image_lut[offset] = (cell, cell_image)
 
     # find the frame dimensions TODO: not sure is supposed to get min x/y
@@ -375,8 +375,8 @@ def load_sprite_file(file_id: int, f_name: str, data: List, pal: PalFile,
             frame_image.paste(cell_image, (0, 0), cell_image)
         frames.append(frame_image)
 
-    animations = get_animations_in_ccfile_sprite(f_name, len(frames), 66, ver, platform)
-    return SpriteFile(file_id, f_name, frames, animations)
+    animations = get_animations_in_ccfile_sprite(raw_file.file_name, len(frames), 66, ver, platform)
+    return SpriteFile(raw_file.file_id, raw_file.file_name, frames, animations)
 
 
 def sprite_from_baked_folder(folder: str):

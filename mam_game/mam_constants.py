@@ -1,4 +1,6 @@
+from dataclasses import dataclass
 from enum import Enum
+from typing import List
 
 import slugify
 
@@ -22,10 +24,23 @@ class Platform(Enum):
         return self.name.lower()
 
 
+@dataclass
+class RawFile:
+    file_id: int
+    file_name: str
+    data: List
+
+    def __str__(self):
+        return f"file_{self.file_id}_{self.file_name}"
+
+    def __repr__(self):
+        return str(self)
+
+
 class MAMFileParseError(Exception):
-    def __init__(self, file_id, file_name, message):
-        self.file_id = str(file_id)
-        self.file_name = str(file_name)
+    def __init__(self, raw_file: RawFile, message):
+        self.file_id = str(raw_file.file_id)
+        self.file_name = str(raw_file.file_name)
         message = str(message)
         self.message = f"File parse error: file_id={self.file_id}, file={self.file_name}, error='{message}'"
         super().__init__(self.message)
@@ -49,3 +64,4 @@ def spell_slug(spell_name: str):
     while "--" in s:
         s = s.replace("--", "-")
     return f"spell-"
+
