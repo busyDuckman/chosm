@@ -48,4 +48,14 @@ class MAMFile(object):
         preview_image = self._gen_preview_image(64)
         preview_image.save(join(file_path, "preview.jpg"))
 
+    def __eq__(self, other):
+        if isinstance(other, MAMFile):
+            return self.number == other.number and \
+                self.file_id == other.file_id and \
+                self.created_timestamp == other.created_timestamp
+        return NotImplemented
+
+    def __hash__(self):
+        return hash((self.file_id, self.name, self.created_timestamp))
+
 

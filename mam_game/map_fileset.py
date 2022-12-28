@@ -15,22 +15,15 @@ import helpers.pil_image_helpers as pih
 from game_engine.game_engine import Direction
 from game_engine.map import Map, Tile
 from helpers.misc import is_continuous_integers
-from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, map_slug, spell_slug
+from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, map_slug, spell_slug, RawFile
 from mam_game.mam_file import MAMFile
 import helpers.stream_helpers as sh
 import helpers.color as ch
 from mam_game.pal_file import PalFile
 
 class MapFile(MAMFile):
-    def __init__(self, file_id, name)
+    def __init__(self, file_id, name):
         super().__init__(file_id, name)
-
-@dataclass
-class RawFile:
-    file_id: int
-    f_name: str
-    data: List
-
 
 def get_luts():
     mm5_surface_lut = [

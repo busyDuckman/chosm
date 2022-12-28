@@ -5,7 +5,7 @@ import json
 from PIL import Image
 
 from helpers.color import Color, color_from_6bit_rgb
-from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError
+from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, RawFile
 from mam_game.mam_file import MAMFile
 
 
@@ -36,21 +36,20 @@ class PalFile(MAMFile):
         super().bake(file_path)
 
 
-def load_pal_file(file_id: int, name: str, data: List,
-                  ver: MAMVersion, platform: Platform) -> PalFile:
-    if len(data) != (256 * 3):
-        raise MAMFileParseError(file_id, name, "Must be 768 bytes in a wox/mm3 palette")
+def load_pal_file(raw_file: RawFile, ver: MAMVersion, platform: Platform) -> PalFile:
+    if len(raw_file.data) != (256 * 3):
+        raise MAMFileParseError(raw_file, "Must be 768 bytes in a wox/mm3 palette")
 
     # load data
-    colors = [(data[i], data[i+1], data[i+2]) for i in range(256)]
+    colors = [tuple(raw_file.data[i*3:i*3+3]) for i in range(256)]
 
     # check it is a 6 bit palette
     for i, (r, g, b) in enumerate(colors):
         if any(q >= 2**6 for q in [r, g, b]):
-            raise MAMFileParseError(file_id, name, f"Palette was > 6bit: pos={i}, color={(r, g, b)}")
+            raise MAMFileParseError(raw_file, f"Palette was > 6bit: pos={i}, color={(r, g, b)}")
 
     colors = [color_from_6bit_rgb(r, g, b) for r, g, b in colors]
-    return PalFile(file_id, name, colors)
+    return PalFile(raw_file.file_id, raw_file.file_name, colors)
 
 
 def get_default_pal(ver: MAMVersion, platform: Platform):
