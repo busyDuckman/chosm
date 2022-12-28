@@ -1,0 +1,4 @@
+I am duplicating reference material here, because peoples blogs eventually disappear and so does
+their analysis and code.
+
+lzhuf.c: http://stjarnhimlen.se/snippets/lzhuf.c

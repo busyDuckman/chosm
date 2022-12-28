@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href="{{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name="animation.css") }}"
+     rel="stylesheet">
+</head>
+
+<body style="background-color: cadetblue">
+<div style="">
+
+    <div style="border: 1px solid #303030; width: 600px; margin: 10px">
+        <div style="background-color: darkblue; color: white; text-align: center">
+        Sprite Sheet ({{ info["num_frames"] }} frames)
+        </div>
+
+        <div style="overflow: scroll">
+            <img src="{{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name="sprite_sheet.png")  }}">
+        </div>
+    </div>
+</div>
+
+<br>
+<b>Animations</b>
+{% for anim_info in info["animations"] %}
+    <div style="border: 1px solid #303030; width: 600px; margin: 10px">
+        <div style="background-color: darkblue; color: white; text-align: center;">
+        Animation "{{ anim_info["slug"] }}" ({{ anim_info["frame_idx_list"]|length }} frames)
+        </div>
+        <div style="width: {{ 600 }}px; height: {{ info["height"] + 20 }}px;
+             background-color: fuchsia;
+             background-image: linear-gradient(fuchsia, #900090);">
+            <div class='anim_{{ info["slug"] }}_{{ anim_info["slug"] }}'
+                 style="width: {{ info["width"] + 10 }}px; height: {{ info["height"] + 10 }}px">
+            </div>
+        </div>
+        <table style="">
+            <tr>
+                <td style="text-align: right">frame order:</td>
+                <td> {{ anim_info["frame_idx_list"] }}</td>
+            </tr>
+            <tr>
+                <td style="text-align: right">fps:</td>
+                <td> {{ anim_info["fps"]|round(2) }} <span style="color: #404040"> &nbsp;&nbsp;&nbsp ({{ anim_info["ms_per_frame"] }}ms per frame) </span> </td>
+            </tr>
+        </table>
+
+    </div>
+    <br>
+{% endfor %}
+
+{#{% for file in pack.get_resource_files(resource_name) %}#}
+{#  <a href=" {{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name=file) }}">{{ file }}</a><br>#}
+{#{% endfor %}#}
+
+</body>
+</html>

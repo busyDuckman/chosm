@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>Resource Pack Editor / Viewer</title>
+    <link href="{{ url_for('static', filename='general.css') }}" rel="stylesheet">
+</head>
+<body style="width: 100%; height: 100%">
+
+<div>
+  <div style="float: left; background-color:#606060; width: 220px; padding: 10px">
+      <b>Packs</b>
+      <div style="overflow: auto; height: 200px; background-color:#a0a0a0">
+          {% for pack in packs %}
+            <a href="{{ url_for('editor_view', pack_name=pack, resource_name=None) }}">{{pack}}</a><br>
+          {% endfor %}
+      </div>
+      <hr>
+      <b>Resources</b></br>
+      <div style="overflow: auto; height: 600px; background-color:#a0a0a0">
+          {% for name, dir in resources.items() %}
+{#              <div class="button_link" style="overflow: clip">#}
+                    <a href="{{ url_for('editor_view', pack_name=pack_name, resource_name=name) }}"
+                       class="button_link"
+                        style="width: 35%;">
+                    <img src="{{ url_for('get_file', pack_name=pack_name, resource_name=name, file_name="preview.jpg")  }}"
+                         style="width: 64px">
+                        {{name}}
+                    </a>
+              {% if (loop.index0 + 1) % 2 == 0 %}
+                  <br>
+              {% endif %}
+          {% endfor %}
+      </div>
+
+
+  </div>
+  <div style="float: left; background-color:#909090; width: 1250px; height: 875px">
+      {% if resource_name %}
+{#      <H1>edit&nbsp;#}
+{#        {{ pack.get_resource_type(resource_name) }}#}
+{#      </H1>#}
+      <div style="background-color: darkblue; color: white; text-align: center; width: 1200px">
+          {{ pack.get_resource_type(resource_name) }} editor </div>
+
+      <iframe src="{{ url_for('edit_resource', pack_name=pack_name, resource_name=resource_name) }}"
+              title="Editor View" scrolling="“no”" frameborder="“0”" width="1200px" height="800px">
+
+      {% endif %}
+  </div>
+</div>
+
+
+
+</body>
+</html>
