@@ -1,0 +1,266 @@
+Armors
+------
+				Price
+Armor		Armor Class	sell	buy	Kn Pa Ar Cl So Ro Ni Ba Dr Ra
+-----------------------------------------------------------------------------
+Plate Armor	+10		1000	2000	x  x
+Plate Mail	+8		500	1000	x  x
+Splint Mail	+7		300	600	x  x     x                 x
+Chain Mail	+6		200	400	x  x  x  x     x           x
+Ring Mail	+5		100	200	x  x  x  x     x  x        x
+Scale Armor	+4		50	100	x  x     x                 x
+Robes		+2		10	20	x  x  x  x  x  x  x  x  x  x
+
+Shield		+4		50	100	x  x     x     x     x     x
+
+Gauntlets	+1		50	100	x  x  x  x  x  x  x  x  x  x
+
+Helm		+2		30	60	x  x  x  x  x  x  x  x  x  x
+
+Boots		+1		20	40	x  x  x  x  x  x  x  x  x  x
+
+Cape		+1		100	200	x  x  x  x  x  x  x  x  x  x
+Cloak		+1		125	250	x  x  x  x  x  x  x  x  x  x
+
+
+
+
+
+
+1-Hand-Weapons:
+---------------
+
+		Price
+Weapon		sell	buy	Hit Points	Kn Pa Ar Cl So Ro Ni Ba Dr Ra
+-----------------------------------------------------------------------------
+Club		0,5	1	1-3		x  x  x  x  x  x  x  x	x  x
+Dagger		4	8	2-4		x  x  x     x  x  x  x	x  x
+Hand Axe	5	10	2-6		x  x  x        x  x  x	x  x
+Cudgel		7,5	15	1-6		x  x  x  x     x  x  x	x  x
+Short Sword	7,5	15	2-6		x  x  x        x     x	   x
+Spear		7,5	15	1-9		x  x  x        x  x  x	x  x
+Maul		15	30	1-8		x  x  x  x     x  x  x	x  x
+Nunchakas	15	30	2-6		x  x        	  x
+Cutlass		20	40	2-8		x  x  x        x     x	   x
+Long Sword	25	50	3-9		x  x  x        x     x	   x
+Mace		25	50	2-8		x  x  x  x     x  x  x	x  x
+Sabre		30	60	4-8		x  x  x        x     x	   x
+Wakazashi	30	60	3-9		x  x		  x
+Scimitar	40	80	2-10		x  x  x        x     x	   x
+Broad Sword	50	100	3-12		x  x  x        x     x	   x
+Flail		50	100	1-10		x  x  x  x     x  x  x	x  x
+Katana		75	150	4-12		x  x              x
+
+
+2-Hand-Weapons:
+---------------
+
+Weapon		sell	buy	Hit Points	Kn Pa Ar Cl So Ro Ni Ba Dr Ra
+-----------------------------------------------------------------------------
+Staff		20	40	2-8		x  x  x  x  x  x  x  x	x  x
+Glaive		40	80	4-12		x  x  x        x  x  x	   x
+Battle Axe	50	100	3-15		x  x  x        x     x	   x
+Trident		50	100	2-12		x  x  x	       x  x  x     x
+Hammer		60	120	2-10		x  x  x  x     x  x  x	x  x
+Pike		75	150	2-16		x  x  x        x  x  x	   x
+Bardiche	100	200	4-16		x  x  x        x  x  x	   x
+Grand Axe	100	200	3-19		x  x  x        x     x	   x
+Halberd		125	250	3-18		x  x  x        x  x  x	   x
+Great Axe	150	300	3-21		x  x  x        x     x	   x
+Naginata	150	300	5-15		x  x              x
+Flamberge	200	400	4-20		x  x  x        	     x     x
+
+
+Missile Weapons:
+----------------
+
+Weapon		sell	buy	Hit Points	Kn Pa Ar Cl So Ro Ni Ba Dr Ra
+-----------------------------------------------------------------------------
+Sling		7,5	15	2-4		x  x  x        x  x  x	   x
+Short Bow	12,5	25	3-6		x  x  x        x  x  x	   x
+Crossbow	25	50	4-8		x  x  x        x  x  x	   x
+Long Bow	50	100	5-10		x  x  x        x  x  x	   x
+
+
+Accessories
+-----------
+					Price
+Accessory	Type		Number	sell	buy
+---------------------------------------------------
+Broach		Medal		2	125	250
+Cameo		Medal		2	150	300
+Charm		Medal		2	25	50
+Medal		Medal		2	50	100
+Scarab		Medal		2	100	200
+				
+Belt		Belt		1	50	100
+				
+Ring		Ring		2	50	100
+				
+Necklace	Necklace	1	500	1000
+Pendant		Necklace	1	250	500
+Amulet		Necklace	1	1000	2000
+
+
+
+
+Materials for Armor/Weapons
+---------------------------
+				Armor		Weapons
+Material	Price Factor	Armor Class	Physical Damage	Hit Modifier
+----------------------------------------------------------------------------
+Wood		1/10		-3		-3		-3
+Brass		1/2		-2		-4		+3
+Bronze		3/4		-1		-2		+2
+Leather		1/4		+0		-6		-4
+Glass		2		+0		+0		+0
+Iron		2		+1		+2		+1
+Coral		3		+1		+1		+1
+Crystal		5		+1		+1		+1
+Silver		5		+2		+4		+2
+Lapis		10		+2		+2		+2
+Pearl		20		+2		+2		+2
+Amber		30		+3		+3		+3
+Steel		10		+4		+6		+3
+Ebony		40		+4		+4		+4
+Quartz		50		+5		+5		+5
+Gold		20		+6		+8		+4
+Platinum	50		+8		+10		+6
+Ruby		60		+10		+12		+6
+Emerald		70		+12		+15		+7
+Sapphire	80		+14		+20		+8
+Diamond		90		+16		+30		+9
+Obsidian	100		+20		+50		+10
+
+
+Magical Properties of Items
+---------------------------
+						Price
+Name		Type		Improvement	sell	buy
+--------------------------------------------------------------
+Sharp		Accuracy	+3		+150	+300
+Accurate	Accuracy	+5		+250	+500
+Marksman	Accuracy	+10		+500	+1000
+Precision	Accuracy	+15		+750	+1500
+True		Accuracy	+20		+1000	+2000
+Exacto		Accuracy	+30		+1500	+3000
+Protection	Armor Class	+2		+100	+200
+Armored		Armor Class	+4		+200	+400
+Defender	Armor Class	+6		+300	+600
+Stealth		Armor Class	+10		+500	+1000
+Divine		Armor Class	+16		+800	+1600
+Vigor		Hit Points	+4		+200	+400
+Health		Hit Points	+6		+300	+600
+Life		Hit Points	+10		+500	+1000
+Troll		Hit Points	+20		+1000	+2000
+Vampiric	Hit Points	+50		+2500	+5000
+Clever		Intellect	+2		+100	+200
+Mind		Intellect	+3		+150	+300
+Sage		Intellect	+5		+250	+500
+Thought		Intellect	+8		+400	+800
+Knowledge	Intellect	+12		+600	+1200
+Intellect	Intellect	+17		+850	+1700
+Wisdom		Intellect	+23		+1150	+2300
+Genius		Intellect	+30		+1500	+3000
+Clover		Luck		+5		+250	+500
+Chance		Luck		+10		+500	+1000
+Winners		Luck		+15		+750	+1500
+Lucky		Luck		+20		+1000	+2000
+Gamblers	Luck		+25		+1250	+2500
+Leprechauns	Luck		+30		+1500	+3000
+Might		Might		+2		+100	+200
+Strength	Might		+3		+150	+300
+Warrior		Might		+5		+250	+500
+Ogre		Might		+8		+400	+800
+Giant		Might		+12		+600	+1200
+Thunder		Might		+17		+850	+1700
+Force		Might		+23		+1150	+2300
+Power		Might		+30		+1500	+3000
+Dragon		Might		+38		+1900	+3800
+Photon		Might		+47		+2350	+4700
+Buddy		Personality	+2		+100	+200
+Friendship	Personality	+3		+150	+300
+Charm		Personality	+5		+250	+500
+Personality	Personality	+8		+400	+800
+Charisma	Personality	+12		+600	+1200
+Leadership	Personality	+17		+850	+1700
+Ego		Personality	+23		+1150	+2300
+Holy		Personality	+30		+1500	+3000
+Quick		Speed		+2		+100	+200
+Swift		Speed		+3		+150	+300
+Fast		Speed		+5		+250	+500
+Rapid		Speed		+8		+400	+800
+Speed		Speed		+12		+600	+1200
+Wind		Speed		+17		+850	+1700
+Accelerator	Speed		+23		+1150	+2300
+Velocity	Speed		+30		+1500	+3000
+Spell		Spell Points	+4		+200	+400
+Castors		Spell Points	+8		+400	+800
+Witch		Spell Points	+12		+600	+1200
+Mage		Spell Points	+16		+800	+1600
+Archmage	Spell Points	+20		+1000	+2000
+Arcane		Spell Points	+25		+1250	+2500
+Mugger		Thievery	+4		+200	+400
+Burgler		Thievery	+6		+300	+600
+Looter		Thievery	+8		+400	+800
+Brigand		Thievery	+10		+500	+1000
+Filch		Thievery	+12		+600	+1200
+Thief		Thievery	+14		+700	+1400
+Rogue		Thievery	+16		+800	+1600
+Plunder		Thievery	+18		+900	+1800
+Criminal	Thievery	+20		+1000	+2000
+Pirate		Thievery	+25		+1250	+2500
+
+
+Magical Protection/Damage of Armor & Weapons:
+---------------------------------------------
+							Price
+Name		Type		Protection	Damage	sell	buy
+----------------------------------------------------------------------
+Acidic		Acid/Poison	+10		+2	+100	+200
+Venemous	Acid/Poison	+15		+4	+200	+400
+Poisonous	Acid/Poison	+20		+8	+400	+800
+Toxic		Acid/Poison	+25		+16	+800	+1600
+Noxious		Acid/Poison	+40		+32	+1600	+3200
+Icy		Cold		+5		+2	+100	+200
+Frost		Cold		+10		+4	+200	+400
+Freezing	Cold		+15		+5	+250	+500
+Cold		Cold		+20		+10	+500	+1000
+Cryo		Cold		+25		+20	+1000	+2000
+Flickering	Electricity	+5		+2	+100	+200
+Sparking	Electricity	+7		+3	+150	+300
+Static		Electricity	+9		+4	+200	+400
+Flashing	Electricity	+12		+5	+250	+500
+Shocking	Electricity	+15		+10	+500	+1000
+Electric	Electricity	+20		+15	+750	+1500
+Dyna		Electricity	+25		+20	+1000	+2000
+Glowing		Energy		+5		+2	+100	+200
+Incandescent	Energy		+7		+3	+150	+300
+Dense		Energy		+9		+4	+200	+400
+Sonic		Energy		+11		+5	+250	+500
+Power		Energy		+13		+10	+500	+1000
+Thermal		Energy		+15		+15	+750	+1500
+Radiating	Energy		+20		+20	+1000	+2000
+Kinetic		Energy		+25		+30	+1500	+3000
+Burnning		Fire		+5		+2	+100	+200
+Fiery		Fire		+7		+3	+150	+300
+Pyric		Fire		+9		+4	+200	+400
+Fuming		Fire		+12		+5	+250	+500
+Flaming		Fire		+15		+10	+500	+1000
+Seething	Fire		+20		+15	+750	+1500
+Scorching	Fire		+30		+30	+1500	+3000
+Blazing		Fire		+25		+20	+1000	+2000
+Mystic		Magic		+5		+5	+250	+500
+Magical		Magic		+10		+10	+500	+1000
+Ectoplasmic	-		-		-	+1250	+2500
+
+
+Name Extensions for Weapons:
+----------------------------
+
+Dragon Slayer	- x3 vs. Dragons
+Monster Masher	- x3 vs. Monsters
+Undead Eater	- x3 vs. Undead
+Golem Smasher	- x3 vs. Golems
+Bug Zapper	- x3 vs. Insects
+Beast Bopper	- x3 vs. Animals
