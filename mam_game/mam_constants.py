@@ -65,3 +65,9 @@ def spell_slug(spell_name: str):
         s = s.replace("--", "-")
     return f"spell-"
 
+
+class Direction(Enum):
+    NORTH = 0
+    EAST  = 1
+    SOUTH = 2
+    WEST  = 3

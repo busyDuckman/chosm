@@ -45,7 +45,7 @@ class MAMFile(object):
         with open(os.path.join(file_path, "info.json"), 'w') as f:
             json.dump(self._get_bake_dict(), f, indent=2)
 
-        preview_image = self._gen_preview_image(64)
+        preview_image = self._gen_preview_image(128)
         preview_image.save(join(file_path, "preview.jpg"))
 
     def __eq__(self, other):

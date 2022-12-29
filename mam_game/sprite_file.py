@@ -1,3 +1,4 @@
+import copy
 import glob
 import io
 import json
@@ -53,6 +54,8 @@ class SpriteFile(MAMFile):
         self.width = frames[0].width
         self.height = frames[0].height
 
+        self.size = (self.width, self.height)
+
         self.animations: Dict[str, AnimLoop] = {a.slug: a for a in animations}
 
         # uncomment to enable debug annotation of frames
@@ -67,6 +70,19 @@ class SpriteFile(MAMFile):
 
     def get_type_name(self):
         return "sprite"
+
+    def crop(self, x, y, width, height):
+        if self.size == (width, height):
+            return self
+
+        x2 = x + width
+        y2 = y + height
+        frames = [frame.crop((x, y, x2, y2)) for frame in self.frames]
+        assert frames[0].width == width
+        assert frames[0].height == height
+        anim = [copy.deepcopy(a) for a in self.animations.values()]
+        sprite = SpriteFile(self.file_id, self.name+"_cropped", frames, anim)
+        return sprite
 
     def _get_bake_dict(self):
         info = super()._get_bake_dict()
@@ -158,11 +174,11 @@ class SpriteFile(MAMFile):
             anim_sheet.save(join(file_path, f"anim_{anim.slug}.png"))
 
             # animated gif (seems prone to issues and has no transparency)
-            with open(join(file_path, f"anim_{anim.slug}.gif"), 'wb') as f:
-                if anim.loop:
-                    imageio.mimsave(f, frames, format='gif', fps=anim.get_fps())
-                else:
-                    imageio.mimsave(f, frames, format='gif', fps=anim.get_fps(), loop=0)
+            # with open(join(file_path, f"anim_{anim.slug}.gif"), 'wb') as f:
+            #     if anim.loop:
+            #         imageio.mimsave(f, frames, format='gif', fps=anim.get_fps())
+            #     else:
+            #         imageio.mimsave(f, frames, format='gif', fps=anim.get_fps(), loop=0)
 
         # sprite sheet
         sprite_sheet = pih.join_images(self.frames, mode="RGBA", bg_col=[0, 0, 0, 0])
