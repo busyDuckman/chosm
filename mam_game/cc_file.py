@@ -1,3 +1,4 @@
+import copy
 import fnmatch
 import io
 import itertools
@@ -9,12 +10,14 @@ from pathlib import Path
 from typing import NamedTuple, Dict, List, Tuple, Literal, Iterator, Type
 import logging
 import os
+
+import numpy as np
 from slugify import slugify
 import helpers.stream_helpers as sh
 from mam_game.binary_file import load_bin_file
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, normalise_file_name
 from mam_game.mam_file import MAMFile
-from mam_game.map_fileset import RawFile
+from mam_game.map_file import RawFile, load_map_file
 from mam_game.mmorpg_constants import default_new_policy
 from mam_game.monster_db_file import load_monster_database_file
 from mam_game.pal_file import load_pal_file, get_default_pal, PalFile
@@ -84,6 +87,34 @@ class CCFile:
         self.chained_files: Dict = {}
 
         self._resources: List[MAMFile] = []
+
+    def merge(self, other):
+        other: CCFile = other
+        print(f"Merging {self.file} and {other.file}")
+        merged = copy.deepcopy(self)
+        if os.path.splitext(merged.file)[0] == os.path.splitext(other.file)[0]:
+            merged.file += os.path.splitext(other.file)[1].strip(".")
+        else:
+            merged.file = f"{self.file}_{other.file}"
+
+        merged.file_size = -1
+        merged.slug = slugify(f"{merged.file}_{self.mam_version}_{self.mam_platform}")
+        merged.num_files += other.num_files
+        merged.toc += other.toc
+        merged._raw_data_lut |= other._raw_data_lut
+        merged._toc_file_names += other._toc_file_names
+        merged._toc_file_ids += other._toc_file_ids
+        merged._resources += other._resources
+
+        return merged
+
+
+
+    def get_resources(self, res_type: Type, glob_epr: str = None):
+        res = [r for r in self._resources if isinstance(r, res_type)]
+        if glob_epr is not None:
+            res = [r for r in res if fnmatch.fnmatch(r.name, glob_epr)]
+        return res
 
     def get_resource(self, res_type: Type, id_or_name: Literal[int, str]):
         # turns out, making this getter complex makes a lot of other code simple.
@@ -389,37 +420,69 @@ class CCFile:
         self._resources.append(def_pal)
 
         # get the monster configs
+        print(f"  - loading monster stats: ", end="")
         for f_name in ["dark.mon", "xeen.mon"]:
             if f_name in self._toc_file_names:
-                print(f"  - loading monsters: {f_name}")
+                print(f"{f_name}, ", end="")
                 mon_file = load_monster_database_file(self._raw_data_lut[f_name], self.mam_version, self.mam_platform)
                 self._resources.append(mon_file)
+        print("done.")
 
         # load the base monster animations
         mons = fnmatch.filter(self._toc_file_names, "*.mon")
         mons = [n for n in mons if n[0].isdigit()]  # ie: NOT "dark.mon", "xeen.mon", etc
+        print(f"  - loading {len(mons)} monsters: ", end='')
         for f_name in mons:
+            print(".", end='')
             pal = self.get_pal_for_file(f_name)
             raw = self._raw_data_lut[f_name]
             sprite = load_sprite_file(raw, pal, self.mam_version, self.mam_platform)
             self._resources.append(sprite)
 
-        # # load the attack monster animations
-        # mons = fnmatch.filter(self._toc_file_names, "*.att")
-        # for f_name in mons:
-        #     self.get_file(f_name)
+            raw_att = self._raw_data_lut[f_name.replace(".mon", ".att")]
+            sprite2 = load_sprite_file(raw_att, pal, self.mam_version, self.mam_platform)
+            self._resources.append(sprite2)
+        print()
 
-        # maps = fnmatch.filter(self.file_names, "maze*.dat")
-        # for f_name in maps:
-        #     data_file = RawFile()
-        #      data_dat = self._data_lut_by_id[self._toc_lut_by_name[f_name].file_id]
+        print(f"  - loading hud/misc graphics: ")
+        glob_list = ["*.til"]
+        image_names = [fnmatch.filter(self._toc_file_names, e) for e in glob_list]
+        image_names = np.array(image_names).flatten().tolist()
+        for f_name in image_names:
+            # print(f_name)
+            pal = self.get_pal_for_file(f_name)
+            raw = self._raw_data_lut[f_name]
+            sprite = load_sprite_file(raw, pal, self.mam_version, self.mam_platform)
+            self._resources.append(sprite)
 
+        maps = fnmatch.filter(self._toc_file_names, "m*.dat")
+        print([s for s in self._toc_file_names if '.dat' in s])
+        print([s for s in self._toc_file_names if '.mob' in s])
+        print(f"  - loading {len(maps)} maps: ", end="")
+        # tile_sets = ["cave.til", "cstl.til", "dung.til", "outdoor.til", "town.til",  "scfi.til",  "towr.til"]
+        for f_name in maps:
+            print(f_name)
+            raw_dat = self._raw_data_lut[f_name]
+            mob_file_name = f_name.replace(".dat", ".mob")
+            evt_file_name = f_name.replace(".dat", ".mob")
+            tile_sets = self.get_resources(SpriteFile, "*.til")
+            if mob_file_name in self._raw_data_lut:
+                raw_mob = self._raw_data_lut[mob_file_name]
+                raw_evt = self._raw_data_lut[evt_file_name]
+                map_file = load_map_file(raw_dat, raw_mob, raw_evt, tile_sets, self.mam_version, self.mam_platform)
+                self._resources.append(map_file)
+            else:
+                print("Expected a mob file: " + mob_file_name)
+                map_file = load_map_file(raw_dat, None, None, tile_sets, self.mam_version, self.mam_platform)
+                self._resources.append(map_file)
+        print()
 
 
     def bake(self, bake_dir=None):
         """
         Extract all files to a folder
         """
+        print("Baking resources: ")
         if bake_dir is None:
             bake_dir = ["game_files", "../game_files"]
             bake_dir = [b for b in bake_dir if os.path.isdir(b)]
@@ -434,6 +497,8 @@ class CCFile:
             shutil.rmtree(bake_path)
         os.makedirs(bake_path, exist_ok=True)
 
+        print("  - output dir : " + str(bake_path))
+
         # dump resource pack meta data
         info = {"name": self.slug,
                 "chained_packs": [cc.slug for cc in self.chained_files],
@@ -443,15 +508,18 @@ class CCFile:
             json.dump(info, f)
 
         # bake all the files
-        for obj in self._resources:
+        print(f"  - baking {len(self._resources)} resources: ", end="")
+        for i, obj in enumerate(self._resources):
             try:
                 if obj is not None:
+                    print(obj.get_type_name()[0], end="\n    " if (i+23) % 70 == 0 else "")
                     obj_path = os.path.join(bake_path, obj.slug)
                     assert Path(bake_dir) in Path(obj_path).parents
                     os.makedirs(obj_path, exist_ok=True)
                     obj.bake(obj_path)
             except MAMFileParseError:
                 pass
+        print()
 
         return bake_path
 
@@ -504,8 +572,15 @@ def main():
         time.sleep(0.5)
         print()
 
-    ccf_dark_cc = load_cc_file(f"../game_files/dos/DARK.CC",  MAMVersion.DARKSIDE, Platform.PC_DOS)
-    ccf_dark_cc.bootstrap()
+    dark_cc = load_cc_file(f"../game_files/dos/DARK.CC",  MAMVersion.DARKSIDE, Platform.PC_DOS)
+    # ccf_dark_cc.bootstrap()
+    dark_cur = load_cc_file(f"../game_files/dos/DARK.CUR", MAMVersion.DARKSIDE, Platform.PC_DOS)
+
+    mm5_cc = dark_cc.merge(dark_cur)
+    mm5_cc.bootstrap()
+    mm5_cc.bake()
+
+
     # ccf_intro_cc = load_cc_file(f"../game_files/dos/INTRO.CC", MAMVersion.DARKSIDE, Platform.PC_DOS)
     # ccf_xeen_cc =  load_cc_file(f"../game_files/dos/XEEN.CC",  MAMVersion.CLOUDS,   Platform.PC_DOS)
     # ccf_mm3_cc =   load_cc_file("../game_files/dos/MM3.CC",    MAMVersion.MM3,      Platform.PC_DOS)
@@ -513,10 +588,10 @@ def main():
     # ccf_dark_cc.bake()
 
     # all_cc_files = [ccf_dark_cc, ccf_intro_cc, ccf_xeen_cc, ccf_mm3_cc]
-    all_cc_files = [ccf_dark_cc]
+    # all_cc_files = [ccf_dark_cc]
 
-    for cc_file in all_cc_files:
-        cc_file.bake()
+    # for cc_file in all_cc_files:
+    #     cc_file.bake()
 
 if __name__ == '__main__':
     main()

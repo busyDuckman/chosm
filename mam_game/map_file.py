@@ -1,5 +1,6 @@
 import glob
 import io
+import itertools
 import json
 import os.path
 import textwrap
@@ -12,18 +13,51 @@ import slugify
 from PIL import Image
 
 import helpers.pil_image_helpers as pih
-from game_engine.game_engine import Direction
 from game_engine.map import Map, Tile
 from helpers.misc import is_continuous_integers
-from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, map_slug, spell_slug, RawFile
+from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, map_slug, spell_slug, RawFile, Direction
 from mam_game.mam_file import MAMFile
 import helpers.stream_helpers as sh
 import helpers.color as ch
 from mam_game.pal_file import PalFile
+from mam_game.sprite_file import SpriteFile
+
 
 class MapFile(MAMFile):
-    def __init__(self, file_id, name):
+    def __init__(self, file_id,
+                 name,
+                 game_map: Map,
+                 tile_set: SpriteFile
+                 ):
         super().__init__(file_id, name)
+        self.game_map = game_map
+        self.tile_set = tile_set
+
+    def __str__(self):
+        return f"Palette File: id={self.file_id} num_cols={len(self.colors)}"
+
+    def get_type_name(self):
+        return "map"
+
+    def _gen_preview_image(self, preview_size) -> Image.Image:
+        return self.gen_2d_map().resize((preview_size, preview_size), Image.NEAREST)
+
+    def gen_2d_map(self):
+        w = self.game_map.width * self.tile_set.width
+        h = self.game_map.height * self.tile_set.height
+        map_img = Image.new("RGB", size=(w, h))
+
+        for x, y in itertools.product(range(self.game_map.width), range(self.game_map.height)):
+            x_pos, y_pos = (x * self.tile_set.width, y * self.tile_set.height)
+            frame_idx = self.game_map[x, y].idx_ground
+            frame = self.tile_set.frames[frame_idx]
+            map_img.paste(frame, (x_pos, y_pos), frame)
+
+        return map_img
+
+    def bake(self, file_path):
+        super().bake(file_path)
+
 
 def get_luts():
     mm5_surface_lut = [
@@ -49,13 +83,14 @@ def get_luts():
 
     return mm5_surface_lut, mm4_surface_lut, env_lut
 
+
 def read_map_meta_data(f):
     # 2 bytes: mazenumber, uint16 value indicating this map ID
     maze_id = sh.read_uint16(f)
     maze_slug = map_slug(maze_id)
 
     # 8 bytes, uint16 mazes_id's to the N, E, S, W
-    joining_map_ids = sh.read_uint16(f, 4)
+    joining_map_ids = sh.read_uint16_array(f, 4)
     order = [Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST]
     joining_map_slugs = {d: map_slug(x) for d, x in zip(order, joining_map_ids)}
 
@@ -80,7 +115,7 @@ def read_map_meta_data(f):
     # 16 bytes: surfaceTypes, 16 byte array of surface types (ie, floors) used for indirect lookup
     surface_type_lut = sh.read_byte_array(f, 16)
     # 1 byte: floor type, the default floor type (lookup table, used by indoor maps)
-    default_floor_type = sh.read_byte()
+    default_floor_type = sh.read_byte(f)
 
     return maze_slug, joining_map_slugs, restricted_spells, can_rest, can_save, is_dark, is_outside, \
            wall_type_lut, surface_type_lut, default_floor_type
@@ -104,14 +139,15 @@ def read_map_meta_data(f):
     # 32 bytes: 16x16 bit array indicating which tiles have been "stepped on"
 
 
-def load_sprite_file(maze_dat: RawFile,
-                     maze_mob: RawFile,
-                     pal: PalFile,
-                     ver: MAMVersion,
-                     platform: Platform,
-                     map_width = 16,
-                     map_height = 16
-                     ) -> MapFile:
+def load_map_file(maze_dat: RawFile,
+                  maze_mob: RawFile,
+                  maze_evt: RawFile,
+                  tile_sets: List[SpriteFile],
+                  ver: MAMVersion,
+                  platform: Platform,
+                  map_width = 16,
+                  map_height = 16
+                  ) -> MapFile:
     total_tiles = map_width * map_height
 
     mm5_surface_lut, mm4_surface_lut, env_lut = get_luts()
@@ -157,5 +193,11 @@ def load_sprite_file(maze_dat: RawFile,
             has_object = (m_flag & 0x08) != 0
             _ = (m_flag & 0x07)  # number of monsters, unused
 
-            tile = Tile(base, middle, map_top, map_overlay)
+            tile = Tile(base, middle, map_top, map_overlay, 0)
             the_map[x, map_height - y - 1] = tile
+
+    tileset_name = "outdoor.til"
+    map_id = int("".join([c for c in maze_dat.file_name if c.isdigit()]))
+    tile_set = [t for t in tile_sets if t.name == tileset_name][0].crop(0, 0, 10, 8)
+    map_file = MapFile(map_id, f"maze.nam_{map_id}", the_map, tile_set)
+    return map_file
