@@ -59,20 +59,21 @@ class ResourcePack:
         type_name = os.path.split(path)[1].split("-")[0].strip().lower()
         return type_name
 
-    def load_resource(self, resource_name) -> MAMFile:
-        path = self.get_resource_path(resource_name)
-        type_name = self.get_resource_type(resource_name)
-
-        match type_name:
-            case 'sprite':
-                return sprite_from_baked_folder(path)
-            case "palette":
-                return pal_from_baked_folder(path)
-        raise ValueError()
+    # def load_resource(self, resource_name) -> MAMFile:
+    #     path = self.get_resource_path(resource_name)
+    #     type_name = self.get_resource_type(resource_name)
+    #
+    #     match type_name:
+    #         case 'sprite':
+    #             return sprite_from_baked_folder(path)
+    #         case "palette":
+    #             return pal_from_baked_folder(path)
+    #     raise ValueError()
 
     def _is_hidden_file(self, f):
-        hidden = set(["info.json"])
-        return f in hidden
+        # hidden = set(["info.json"])
+        # return f in hidden
+        return False
 
     def get_resource_files(self, resource_name, glob_exp=None, full_path=False):
         path = self.get_resource_path(resource_name)
@@ -87,4 +88,25 @@ class ResourcePack:
         if full_path:
             files = [join(path, f) for f in files]
         return files
+
+    def load_json_file_from_resource(self, resource_name, json_file_name):
+        path = self.get_resource_path(resource_name)
+        assert os.path.isdir(path)
+        file_path = join(path, json_file_name)
+        assert os.path.isfile(file_path)
+        with open(file_path, 'rt') as f:
+            return json.load(f)
+
+    def load_txt_file_from_resource(self, resource_name, file_name, remove_blank_lines=True):
+        path = self.get_resource_path(resource_name)
+        assert os.path.isdir(path)
+        file_path = join(path, file_name)
+        assert os.path.isfile(file_path)
+        with open(file_path, 'rt') as f:
+            lines = f.readlines()
+
+        if remove_blank_lines:
+            lines = [q for q in lines if len(q.strip()) > 0]
+
+        return lines
 

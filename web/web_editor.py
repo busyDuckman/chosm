@@ -56,17 +56,25 @@ def landing():
 @app.route("/editor/<pack_name>", defaults = {"resource_name" : None}, methods=['GET', 'POST'])
 @app.route("/editor/<pack_name>/<resource_name>", methods=['GET', 'POST'])
 def editor_view(pack_name, resource_name):
-    print(pack_name, resource_name)
+    glob_exp = session.get("glob_exp", None)
+    if request.method == "POST":
+        glob_exp = request.form.get("glob-epr")
+        glob_exp = None if len(glob_exp.strip()) == 0 else glob_exp
+        session["glob_exp"] = glob_exp if glob_exp is not None else ''
+        print("Server POST ->", glob_exp)
+
+    # print(pack_name, resource_name)
     packs = sorted(list(resource_packs.keys()))
     pack = None
     resources = {}
     if pack_name is not None:
         pack = resource_packs[pack_name]
-        resources = pack.list_resources()
+        resources = pack.list_resources(glob_exp)
 
     return render_template('editor.html',
                            packs=packs,
                            pack=pack,
+                           glob_exp=glob_exp,
                            pack_name=pack_name,
                            resources=resources,
                            resource_name=resource_name
@@ -95,7 +103,7 @@ def get_file(pack_name, resource_name, file_name):
 
     # get file to play nicely with send_from_directory(..)
     path = os.path.relpath(path, app.config['GAME_FILES'])
-    print(path)
+    # print(path)
     # TODO get web server to send file
     return send_from_directory("../game_files/baked", path)
 
