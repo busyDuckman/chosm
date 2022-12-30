@@ -10,3 +10,26 @@
     margin: 4px 2px;
     cursor: pointer
 }
+
+.window_bg {
+    background-color: cadetblue;
+}
+
+.desktop {
+    background-color:#909090;
+}
+
+.window_title {
+    background-color: darkblue;
+    color: white;
+    text-align: center;
+}
+
+.window_border {
+    border: 1px solid #303030;
+}
+
+.sub_window_border {
+    border: 1px solid #303030;
+    margin: 10px
+}

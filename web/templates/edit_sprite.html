@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='general.css') }}"/>
     <meta charset="UTF-8">
     <link href="{{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name="animation.css") }}"
      rel="stylesheet">
 </head>
 
-<body style="background-color: cadetblue">
+<body class="window_bg" style="background-color: cadetblue">
 <div style="">
 
-    <div style="border: 1px solid #303030; width: 600px; margin: 10px">
-        <div style="background-color: darkblue; color: white; text-align: center">
+    <div style="width: 600px" class="sub_window_border">
+        <div class="window_title">
         Sprite Sheet ({{ info["num_frames"] }} frames)
         </div>
 
@@ -21,10 +22,9 @@
 </div>
 
 <br>
-<b>Animations</b>
 {% for anim_info in info["animations"] %}
-    <div style="border: 1px solid #303030; width: 600px; margin: 10px">
-        <div style="background-color: darkblue; color: white; text-align: center;">
+    <div class="sub_window_border">
+        <div class="window_title">
         Animation "{{ anim_info["slug"] }}" ({{ anim_info["frame_idx_list"]|length }} frames)
         </div>
         <div style="width: {{ 600 }}px; height: {{ info["height"] + 20 }}px;
@@ -49,9 +49,16 @@
     <br>
 {% endfor %}
 
-{#{% for file in pack.get_resource_files(resource_name) %}#}
-{#  <a href=" {{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name=file) }}">{{ file }}</a><br>#}
-{#{% endfor %}#}
+<div class="sub_window_border">
+    <div class="window_title">
+    List of files in resource
+    </div>
+    <div style="overflow: auto; height: 200px; background-color:#a0a0a0">
+        {% for file in pack.get_resource_files(resource_name) %}
+          <a href=" {{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name=file) }}">{{ file }}</a><br>
+        {% endfor %}
+    </div>
+</div>
 
 </body>
 </html>

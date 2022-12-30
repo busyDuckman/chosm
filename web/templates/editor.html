@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/html">
 <head>
+{#    <link rel="stylesheet" type="text/css" href="../static/general.css"/>#}
     <meta charset="UTF-8">
     <title>Resource Pack Editor / Viewer</title>
     <link href="{{ url_for('static', filename='general.css') }}" rel="stylesheet">
@@ -10,15 +11,21 @@
 <div>
   <div style="float: left; background-color:#606060; width: 220px; padding: 10px">
       <b>Packs</b>
-      <div style="overflow: auto; height: 200px; background-color:#a0a0a0">
+      <div style="overflow: auto; height: 100px; background-color:#a0a0a0">
           {% for pack in packs %}
             <a href="{{ url_for('editor_view', pack_name=pack, resource_name=None) }}">{{pack}}</a><br>
           {% endfor %}
       </div>
       <hr>
       <b>Resources</b></br>
-      <div style="overflow: auto; height: 600px; background-color:#a0a0a0">
-          {% for name, dir in resources.items() %}
+
+      <form method="post" id="glob-epr-form">
+        <input type="text" name="glob-epr" id="glob-epr", value="{{ glob_exp }}">
+        <button type="submit">Apply</button>
+      </form>
+
+      <div style="overflow: auto; height: 650px; background-color:#a0a0a0">
+          {% for name, dir in resources | dictsort %}
 {#              <div class="button_link" style="overflow: clip">#}
                     <a href="{{ url_for('editor_view', pack_name=pack_name, resource_name=name) }}"
                        class="button_link"
@@ -35,21 +42,48 @@
 
 
   </div>
-  <div style="float: left; background-color:#909090; width: 1250px; height: 875px">
+  <div class="desktop" style="float: left; width: 1250px; height: 875px">
       {% if resource_name %}
 {#      <H1>edit&nbsp;#}
 {#        {{ pack.get_resource_type(resource_name) }}#}
 {#      </H1>#}
-      <div style="background-color: darkblue; color: white; text-align: center; width: 1200px">
-          {{ pack.get_resource_type(resource_name) }} editor </div>
+      <div class="window_border" style="width: 1200px;">
+          <div class="window_title" style="width: 1200px;">
+              {{ pack.get_resource_type(resource_name) }} editor
+          </div>
 
-      <iframe src="{{ url_for('edit_resource', pack_name=pack_name, resource_name=resource_name) }}"
-              title="Editor View" scrolling="“no”" frameborder="“0”" width="1200px" height="800px">
+          <iframe src="{{ url_for('edit_resource', pack_name=pack_name, resource_name=resource_name) }}"
+                  title="Editor View" scrolling="“no”" frameborder="“0”" width="1200px" height="800px">
+      </div>
 
       {% endif %}
   </div>
 </div>
 
+
+
+<script src="https://code.jquery.com/jquery-3.5.1.js"
+          integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc="
+          crossorigin="anonymous"></script>
+
+  <script type="text/javascript">
+    $(document).on('click','#glob-epr-form',function(e)
+                   {
+      console.log('hello');
+      e.preventDefault();
+      $.ajax({
+        type:'POST',
+        url:'{{ url_for("editor_view", pack_name=pack_name, resource_name=resource_name) }}',
+        data:{
+          glob-epr:$("#glob-epr").val()
+        },
+        success:function()
+        {
+          alert('saved');
+        }
+      })
+    });
+  </script>
 
 
 </body>

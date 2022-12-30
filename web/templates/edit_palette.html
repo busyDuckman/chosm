@@ -1,10 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='general.css') }}"/>
     <meta charset="UTF-8">
-    <title>Title</title>
 </head>
-<body>
+<body class="window_bg">
+
+<div style="">
+
+    <div style="width: 600px" class="sub_window_border">
+        <div class="window_title">
+        Palette
+        </div>
+        <div>
+            {%  set cols = pack.load_txt_file_from_resource(resource_name, "html_cols.pal") %}
+            <table cellspacing="0" style="text-align: center; font-size: 12px">
+                {% for y in range(16) %}
+                    <tr style="height: 28px">
+                        {% for x in range(16) %}
+                            {% set pos = x + y* 16 %}
+                            <td style="background-color: {{ cols[pos] }}; border: none; margin: 0; gap: 0">
+                                &nbsp;{{ pos }}&nbsp;
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="sub_window_border">
+    <div class="window_title">
+    List of files in resource
+    </div>
+    <div style="overflow: auto; height: 200px; background-color:#a0a0a0">
+        {% for file in pack.get_resource_files(resource_name) %}
+          <a href=" {{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name=file) }}">{{ file }}</a><br>
+        {% endfor %}
+    </div>
+</div>
 
 </body>
 </html>
