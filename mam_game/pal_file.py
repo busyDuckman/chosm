@@ -34,9 +34,9 @@ class PalFile(MAMFile):
         with open(os.path.join(file_path, "pal.json"), 'w') as f:
             json.dump(self.colors_rgb, f)
 
-        with open(os.path.join(file_path, "html_cols.pal"), 'wt') as f:
-            txt = "\n".join([c.as_html() for c in self.colors])
-            f.write(txt)
+        # with open(os.path.join(file_path, "html_cols.pal"), 'wt') as f:
+        #     txt = "\n".join([c.as_html() for c in self.colors])
+        #     f.write(txt)
         super().bake(file_path)
 
 

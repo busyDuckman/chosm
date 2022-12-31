@@ -31,7 +31,7 @@ class MapFile(MAMFile):
                  ):
         super().__init__(file_id, name)
         self.game_map = game_map
-        self.tile_set = tile_set
+        self.tile_set: SpriteFile = tile_set
 
     def __str__(self):
         return f"Palette File: id={self.file_id} num_cols={len(self.colors)}"
@@ -57,6 +57,16 @@ class MapFile(MAMFile):
 
     def bake(self, file_path):
         super().bake(file_path)
+
+        d = self.game_map.asdict()
+        d |= {
+            "tileset_slug": self.tile_set.slug,
+            "tileset_name": self.tile_set.name,
+            }
+
+        with open(join(file_path, "map.json"), "wt") as f:
+            json.dump(d, f)
+
 
 
 def get_luts():
@@ -198,6 +208,6 @@ def load_map_file(maze_dat: RawFile,
 
     tileset_name = "outdoor.til"
     map_id = int("".join([c for c in maze_dat.file_name if c.isdigit()]))
-    tile_set = [t for t in tile_sets if t.name == tileset_name][0].crop(0, 0, 10, 8)
+    tile_set = [t for t in tile_sets if t.name == tileset_name][0]
     map_file = MapFile(map_id, f"maze.nam_{map_id}", the_map, tile_set)
     return map_file
