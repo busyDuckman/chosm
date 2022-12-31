@@ -18,14 +18,15 @@ from slugify import slugify
 from numba import njit
 
 import helpers.stream_helpers as sh
+from chosm.sprite_asset import SpriteAsset
 from mam_game.binary_file import load_bin_file
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, normalise_file_name
-from mam_game.mam_file import MAMFile
-from mam_game.map_file import RawFile, load_map_file
+from mam_game.map_file_decoder import RawFile, load_map_file
 from mam_game.mmorpg_constants import default_new_policy
-from mam_game.monster_db_file import load_monster_database_file
-from mam_game.pal_file import load_pal_file, get_default_pal, PalFile
-from mam_game.sprite_file import load_sprite_file, SpriteFile
+from mam_game.npc_db_decoder import load_monster_database_file
+from mam_game.pal_file_decoder import load_pal_file, get_default_pal
+from chosm.pal_asset import PalAsset
+from mam_game.sprite_file_decoder import load_sprite_file
 
 
 @dataclass
@@ -90,7 +91,7 @@ class CCFile:
         # A chained file is like an include or import. ie: The file contains assets needed to load this file.
         self.chained_files: Dict = {}
 
-        self._resources: List[MAMFile] = []
+        self._resources: List[MamAsset] = []
 
     def merge(self, other):
         other: CCFile = other
@@ -401,9 +402,9 @@ class CCFile:
         pal = None
         match self.mam_version:
             case MAMVersion.CLOUDS:
-                pal = self.get_resource(PalFile, "MM4.PAL")
+                pal = self.get_resource(PalAsset, "MM4.PAL")
             case MAMVersion.DARKSIDE:
-                pal = self.get_resource(PalFile, "default.pal")
+                pal = self.get_resource(PalAsset, "default.pal")
         return pal
 
     def bootstrap(self):
@@ -483,7 +484,7 @@ class CCFile:
             raw_dat = self._raw_data_lut[f_name]
             mob_file_name = f_name.replace(".dat", ".mob")
             evt_file_name = f_name.replace(".dat", ".mob")
-            tile_sets = self.get_resources(SpriteFile, "*.til")
+            tile_sets = self.get_resources(SpriteAsset, "*.til")
             if mob_file_name in self._raw_data_lut:
                 raw_mob = self._raw_data_lut[mob_file_name]
                 raw_evt = self._raw_data_lut[evt_file_name]

@@ -1,3 +1,4 @@
+import os
 import io
 from html import escape
 from os.path import split, join
@@ -5,16 +6,11 @@ from typing import List, Dict, NamedTuple
 
 from flask import Flask, render_template, send_from_directory, abort, send_file, make_response, redirect, url_for, \
     request, Response, session, render_template_string
-import os
 
-from mam_game import cc_file
-from mam_game.cc_file import parse_toc_csv, CCFile
-from mam_game.mam_constants import MAMVersion, Platform
-from mam_game.resource_pack import ResourcePack
-from mam_game.sprite_file import SpriteFile
+from chosm.resource_pack import ResourcePack
+
 
 SECRET_KEY = os.urandom(32)
-
 resource_packs: Dict[str, ResourcePack] = {}
 
 
@@ -24,7 +20,6 @@ def init():
     for d in os.scandir(app.config['GAME_FILES']):
         rp = ResourcePack(d.path)
         resource_packs[rp.name] = rp
-
 
 
 class EditorFlaskApp(Flask):

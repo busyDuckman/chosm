@@ -1,55 +1,11 @@
-import dataclasses
 import io
 import logging
-import os
-from typing import List
-import json
 
-from PIL import Image
-
+from chosm.npc_database_asset import NPCDatabaseAsset
 from game_engine.dice import Dice, Roll
 from game_engine.game_engine import NPCType, DamageType, NPCBehaviour, Attack
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, RawFile
-from mam_game.mam_file import MAMFile
-import helpers.pil_image_helpers as pih
 import helpers.stream_helpers as sh
-
-
-class MonsterDBFile(MAMFile):
-    def __init__(self, file_id: int, name: str, monsters: List[NPCType]):
-        super().__init__(file_id, name)
-        self.monsters = monsters
-
-    def __str__(self):
-        return f"Binary File: id={self.file_id} len={len(self.data)}"
-
-    def get_type_name(self):
-        return "mondb"
-
-    def _get_bake_dict(self):
-        info = super()._get_bake_dict()
-        # info["width"] = self.width
-        # info["height"] = self.height
-        # info["num_frames"] = len(self.frames)
-        #
-        # def anim_dict(a: AnimLoop):
-        #     d = asdict(a)
-        #     d["fps"] = a.get_fps()
-        #     d["seconds_per_loop"] = a.get_seconds_per_loop()
-        #     return d
-        #
-        # info["animations"] = [anim_dict(a) for a in self.animations.values()]
-        return info
-
-    def _gen_preview_image(self, preview_size) -> Image.Image:
-        img = Image.new("RGB", size=(preview_size, preview_size))
-        img = pih.annotate(img, "monsters", bottom_text=f"n={len(self.monsters)}")
-        return img
-
-    def bake(self, file_path):
-        # with open(os.path.join(file_path, "data.bin"), 'wb') as f:
-        #     f.write(bytes(self.data))
-        super().bake(file_path)
 
 
 def _get_luts():
@@ -133,7 +89,7 @@ def _get_luts():
 
 
 def load_monster_database_file(raw_file: RawFile,
-                  ver: MAMVersion, platform: Platform) -> MonsterDBFile:
+                  ver: MAMVersion, platform: Platform) -> NPCDatabaseAsset:
     data = raw_file.data
     if len(data) == 0:
         raise MAMFileParseError(raw_file, "Monster file was empty")
@@ -249,4 +205,4 @@ def load_monster_database_file(raw_file: RawFile,
 
         monsters.append(npc)
 
-    return MonsterDBFile(raw_file.file_id, raw_file.file_name, monsters)
+    return NPCDatabaseAsset(raw_file.file_id, raw_file.file_name, monsters)

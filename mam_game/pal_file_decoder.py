@@ -1,46 +1,9 @@
-import os
-from typing import List
-import json
-
-from PIL import Image
-
+from chosm.pal_asset import PalAsset
 from helpers.color import Color, color_from_6bit_rgb
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, RawFile
-from mam_game.mam_file import MAMFile
 
 
-class PalFile(MAMFile):
-    def __init__(self, file_id: int, name: str, pal: List[Color]):
-        super().__init__(file_id, name)
-        if len(pal) != 256:
-            raise MAMFileParseError(file_id, name, "Must be 256 colors in a palette")
-        self.colors: List[Color] = pal.copy()
-        self.colors_rgb = [tuple(c.as_array()) for c in self.colors]
-
-    def __str__(self):
-        return f"Palette File: id={self.file_id} num_cols={len(self.colors)}"
-
-    def get_type_name(self):
-        return "palette"
-
-    def _gen_preview_image(self, preview_size) -> Image.Image:
-        img = Image.new("RGB", size=(16, 16))
-        for y in range(16):
-            for x in range(16):
-                img.putpixel((x, y), self.colors_rgb[y*16 + x])
-        return img.resize((preview_size, preview_size), Image.NEAREST)
-
-    def bake(self, file_path):
-        with open(os.path.join(file_path, "pal.json"), 'w') as f:
-            json.dump(self.colors_rgb, f)
-
-        # with open(os.path.join(file_path, "html_cols.pal"), 'wt') as f:
-        #     txt = "\n".join([c.as_html() for c in self.colors])
-        #     f.write(txt)
-        super().bake(file_path)
-
-
-def load_pal_file(raw_file: RawFile, ver: MAMVersion, platform: Platform) -> PalFile:
+def load_pal_file(raw_file: RawFile, ver: MAMVersion, platform: Platform) -> PalAsset:
     if len(raw_file.data) != (256 * 3):
         raise MAMFileParseError(raw_file, "Must be 768 bytes in a wox/mm3 palette")
 
@@ -53,31 +16,18 @@ def load_pal_file(raw_file: RawFile, ver: MAMVersion, platform: Platform) -> Pal
             raise MAMFileParseError(raw_file, f"Palette was > 6bit: pos={i}, color={(r, g, b)}")
 
     colors = [color_from_6bit_rgb(r, g, b) for r, g, b in colors]
-    return PalFile(raw_file.file_id, raw_file.file_name, colors)
+    return PalAsset(raw_file.file_id, raw_file.file_name, colors)
 
 
 def get_default_pal(ver: MAMVersion, platform: Platform):
     if ver == MAMVersion.DARKSIDE:
-        return PalFile(0x10001, "default.pal", _get_default_pal_xeen())
+        return PalAsset(0x10001, "default.pal", _get_default_pal_xeen())
     elif ver == MAMVersion.CLOUDS:
-        return PalFile(0x10001, "default.pal", _get_default_pal_xeen())
+        return PalAsset(0x10001, "default.pal", _get_default_pal_xeen())
     elif ver == MAMVersion.MM3:
-        return PalFile(0x10001, "default.pal", _get_default_pal_xeen())
+        return PalAsset(0x10001, "default.pal", _get_default_pal_xeen())
     else:
         return None
-
-
-def pal_from_baked_folder(folder: str):
-    with open(os.path.join(folder, "info.json"), "r") as f:
-        info = json.load(f)
-    with open(os.path.join(folder, "pal.json"), "r") as f:
-        pal_info = json.load(f)
-        pal = [Color(c[0], c[1], c[2]) for c in pal_info]
-
-    file_id = int(info["id"])
-    name = int(info["name"])
-    t = int(info["type"])
-    return PalFile(file_id, name, pal)
 
 
 def _get_default_pal_xeen():

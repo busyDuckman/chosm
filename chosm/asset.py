@@ -1,15 +1,26 @@
+# AssetRecord:
+#   - store metadata for the viewer and editor
+#   - store a slug representing the folder
+#   - stack to override each other
+#   - validate their own structure
+#   - can bootstrap a AssetHolder from primary files
 import datetime
 import json
 import os
-import time
 from os.path import join
-from typing import List
 
 from PIL import Image
 from slugify import slugify
 
 
-class MAMFile(object):
+# Asset:
+#   - can be created from in memory objects
+#   - holds raw data, such as images and sound in memory
+#   - can perform operations on the data
+#   - can "bake" that data to an asset.
+#     - by this process, it will create secondary files from primary files
+
+class Asset(object):
     def __init__(self, file_id: int, name: str):
         self.file_id = file_id
         if name is None or len(name.strip()) == 0:
@@ -19,14 +30,14 @@ class MAMFile(object):
         self.created_timestamp = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
 
     def __str__(self):
-        return f"MAM File: id={self.file_id}"
+        return f"Asset: id={self.file_id}"
 
     def get_type_name(self):
-        "mamfile"
+        return NotImplemented
 
     def _get_bake_dict(self):
         d = {"id": self.file_id, "name": self.name, "type": self.get_type_name(),
-             "slug": self.slug,  "created": self.created_timestamp}
+             "slug": self.slug, "created": self.created_timestamp}
         return d
 
     def _gen_preview_image(self, preview_size) -> Image.Image:
@@ -49,7 +60,7 @@ class MAMFile(object):
         preview_image.save(join(file_path, "preview.jpg"))
 
     def __eq__(self, other):
-        if isinstance(other, MAMFile):
+        if isinstance(other, Asset):
             return self.number == other.number and \
                 self.file_id == other.file_id and \
                 self.created_timestamp == other.created_timestamp
@@ -57,5 +68,3 @@ class MAMFile(object):
 
     def __hash__(self):
         return hash((self.file_id, self.name, self.created_timestamp))
-
-
