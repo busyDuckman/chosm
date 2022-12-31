@@ -1,5 +1,5 @@
 import itertools
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from enum import Enum, IntFlag
 from typing import Dict, Tuple
 
@@ -53,6 +53,15 @@ class Map:
 
     def __len__(self):
         return self.width * self.height
+
+    def asdict(self):
+        d = {"width": self.width,
+             "height": self.height,
+             "map": [asdict(tile) for tile in self._map]
+             }
+
+        return d
+
 
 
 class MapInstance:

@@ -6,29 +6,51 @@
 </head>
 <body class="window_bg">
 
-<div style="">
-
-    <div style="width: 600px" class="sub_window_border">
-        <div class="window_title">
-        Palette
-        </div>
-        <div>
-            {%  set cols = pack.load_txt_file_from_resource(resource_name, "html_cols.pal") %}
-            <table cellspacing="0" style="text-align: center; font-size: 12px">
-                {% for y in range(16) %}
-                    <tr style="height: 28px">
-                        {% for x in range(16) %}
-                            {% set pos = x + y* 16 %}
-                            <td style="background-color: {{ cols[pos] }}; border: none; margin: 0; gap: 0">
-                                &nbsp;{{ pos }}&nbsp;
-                            </td>
-                        {% endfor %}
-                    </tr>
-                {% endfor %}
-            </table>
-        </div>
+<div style="width: 600px" class="sub_window_border">
+    <div class="window_title">
+    Palette
+    </div>
+    <div>
+        {%  set cols = pack.load_json_file_from_resource(resource_name, "pal.json") %}
+        <table cellspacing="0" style="text-align: center; font-size: 12px">
+            {% for y in range(16) %}
+                <tr style="height: 28px">
+                    {% for x in range(16) %}
+                        {% set pos = x + y * 16 %}
+                        {% set col_code = "#" + "%02x" % cols[pos][0] + "%02x" % cols[pos][1] + "%02x" % cols[pos][2] %}
+                        <td style="background-color: {{ col_code }}; border: none; margin: 0; gap: 0">
+{#                                {{ col_code }}#}
+                             &nbsp;{{ pos }}&nbsp;
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
     </div>
 </div>
+
+<div style="width: 600px" class="sub_window_border">
+    <div class="window_title">
+    HTML Colour Codes
+    </div>
+    <div>
+        {%  set cols = pack.load_json_file_from_resource(resource_name, "pal.json") %}
+        <table cellspacing="0" style="text-align: center; font-size: 16px">
+            {% for y in range(32) %}
+                <tr style="height: 28px">
+                    {% for x in range(8) %}
+                        {% set pos = x + y * 8 %}
+                        {% set col_code = "#" + "%02x" % cols[pos][0] + "%02x" % cols[pos][1] + "%02x" % cols[pos][2] %}
+                        <td style="background-color: {{ col_code }}; border: none; margin: 0; gap: 0">
+                               &nbsp; {{ col_code }} &nbsp;
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
 
 <div class="sub_window_border">
     <div class="window_title">

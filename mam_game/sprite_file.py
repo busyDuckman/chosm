@@ -43,6 +43,13 @@ class AnimLoop:
             frame_idx_list = list(range(num_frames)) + list(reversed(range(num_frames-1)))
         return AnimLoop(slugify.slugify(name), frame_idx_list, ms_per_frame, loop)
 
+    def split(self, size_left):
+        left = AnimLoop(self.slug, [f for f in self.frame_idx_list if f < size_left], self.ms_per_frame, self.loop)
+        left = AnimLoop(self.slug, [f for f in self.frame_idx_list if f < size_left], self.ms_per_frame, self.loop)
+        right = AnimLoop(self.slug, [f - size_left for f in self.frame_idx_list if f >= size_left],
+                         self.ms_per_frame, self.loop)
+        return left, right
+
 
 class SpriteFile(MAMFile):
     def __init__(self, file_id, name,
@@ -53,7 +60,6 @@ class SpriteFile(MAMFile):
         self.frames = frames
         self.width = frames[0].width
         self.height = frames[0].height
-
         self.size = (self.width, self.height)
 
         self.animations: Dict[str, AnimLoop] = {a.slug: a for a in animations}
@@ -71,7 +77,10 @@ class SpriteFile(MAMFile):
     def get_type_name(self):
         return "sprite"
 
-    def crop(self, x, y, width, height):
+    def num_frames(self) -> int:
+        return len(self.frames)
+
+    def crop(self, x, y, width, height, new_name=None):
         if self.size == (width, height):
             return self
 
@@ -81,8 +90,33 @@ class SpriteFile(MAMFile):
         assert frames[0].width == width
         assert frames[0].height == height
         anim = [copy.deepcopy(a) for a in self.animations.values()]
-        sprite = SpriteFile(self.file_id, self.name+"_cropped", frames, anim)
+        if new_name is None:
+            new_name = self.name + "_cropped"
+        sprite = SpriteFile(self.file_id, new_name, frames, anim)
         return sprite
+
+    def split(self,
+              len_left_side: int,
+              left_name: str = None, right_name: str = None,
+              left_id: int = None, right_id: int = None) -> Tuple:
+        left_frames = self.frames[:len_left_side]
+        right_frames = self.frames[len_left_side:]
+        split_anims = [a.split(len_left_side) for a in self.animations.values()]
+        left_anims = [q[0] for q in split_anims]
+        right_anims = [q[1] for q in split_anims]
+
+        if left_id is None:
+            left_id = self.file_id+0xffffffff1 if self.file_id is not None else None
+        if right_id is None:
+            right_id = self.file_id + 0xffffffff2 if self.file_id is not None else None
+        if left_name is None and self.name is not None:
+            left_name = str(self.name) + "_left"
+        if right_name is None and self.name is not None:
+            right_name = str(self.name) + "_right"
+
+        return SpriteFile(left_id, left_name, left_frames, left_anims), \
+            SpriteFile(right_id, right_name, right_frames, right_anims)
+
 
     def _get_bake_dict(self):
         info = super()._get_bake_dict()
@@ -154,6 +188,20 @@ class SpriteFile(MAMFile):
                 """
 
             css += textwrap.dedent(cls_txt)
+
+        # just the sprite sheet
+        for i in range(self.num_frames()):
+            frame_css = f"""
+            
+            .image_{self.slug}_frame_{i:04d} {{
+                width: {self.width}px;
+                height: {self.height}px;
+                background-image: url('{sprite_sheet_url}');
+                background-position:  {-i*self.width}px;
+            }}
+            """
+            # position: absolute;
+            css += textwrap.dedent(frame_css)
 
         return css
 

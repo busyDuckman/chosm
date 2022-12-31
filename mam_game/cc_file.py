@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import fnmatch
 import io
@@ -10,9 +11,12 @@ from pathlib import Path
 from typing import NamedTuple, Dict, List, Tuple, Literal, Iterator, Type
 import logging
 import os
+import time
 
 import numpy as np
 from slugify import slugify
+from numba import njit
+
 import helpers.stream_helpers as sh
 from mam_game.binary_file import load_bin_file
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, normalise_file_name
@@ -426,7 +430,7 @@ class CCFile:
                 print(f"{f_name}, ", end="")
                 mon_file = load_monster_database_file(self._raw_data_lut[f_name], self.mam_version, self.mam_platform)
                 self._resources.append(mon_file)
-        print("done.")
+        print("  - done.")
 
         # load the base monster animations
         mons = fnmatch.filter(self._toc_file_names, "*.mon")
@@ -453,7 +457,21 @@ class CCFile:
             pal = self.get_pal_for_file(f_name)
             raw = self._raw_data_lut[f_name]
             sprite = load_sprite_file(raw, pal, self.mam_version, self.mam_platform)
-            self._resources.append(sprite)
+            if "outdoor" not in f_name:
+                tile_set, tile_border = sprite.split(sprite.num_frames()-1,
+                                                     left_name=sprite.name, right_name=sprite.name+"_border",
+                                                     left_id=sprite.file_id)
+                tile_set = tile_set.crop(0, 0, 10, 8, new_name=tile_set.name)  # trim out the icons
+                self._resources.append(tile_set)
+                self._resources.append(tile_border)
+
+                layer1, rest = tile_set.split(16, left_name=sprite.name + "_layer_00")
+                layer2, rest = rest.split(16, left_name=sprite.name + "_layer_01")
+                layer3, layer4 = rest.split(16, left_name=sprite.name + "_layer_02")
+
+            else:
+                sprite = sprite.crop(0, 0, 10, 8)
+                self._resources.append(sprite)
 
         maps = fnmatch.filter(self._toc_file_names, "m*.dat")
         print([s for s in self._toc_file_names if '.dat' in s])
@@ -476,7 +494,6 @@ class CCFile:
                 map_file = load_map_file(raw_dat, None, None, tile_sets, self.mam_version, self.mam_platform)
                 self._resources.append(map_file)
         print()
-
 
     def bake(self, bake_dir=None):
         """
@@ -550,28 +567,9 @@ def load_cc_file(path: str, ver: MAMVersion, platform: Platform) -> CCFile:
 
 # ----------------------------------------------------------------------------------------------------------------------
 def main():
-    # logging.basicConfig(level=logging.WARNING)
     logging.basicConfig(level=logging.ERROR)
-    assert CCFile.get_file_name_hash("SPELLS.XEN") == 0x64B2
 
-    #         CLOUDS_INTRO (null, WoXWorld.WoxVariant.CLOUDS),
-    #         CLOUDS_WORLD (null, WoXWorld.WoxVariant.CLOUDS),
-    #         CLOUDS_CUR (null, WoXWorld.WoxVariant.CLOUDS),
-    #         CLOUDS_BOSS (null, WoXWorld.WoxVariant.CLOUDS),
-    #         DARK_CC("MM4.PAL", WoXWorld.WoxVariant.DARK_SIDE),
-    #         DARK_CUR (null, WoXWorld.WoxVariant.DARK_SIDE),
-    #         DARK_SAV (null, WoXWorld.WoxVariant.DARK_SIDE),
-    #         DARK_INTRO("DARK.PAL", WoXWorld.WoxVariant.DARK_SIDE),
-    #         CLOUDS_CC ("MM4.PAL", WoXWorld.WoxVariant.CLOUDS),
-    #         CLOUDS_DAT (null, WoXWorld.WoxVariant.CLOUDS),
-    #         CLOUDS_SAV (null, WoXWorld.WoxVariant.CLOUDS),
-    #         UNKNOWN ("MM3.PAL", WoXWorld.WoxVariant.UNKNOWN);
-
-    def next_file():
-        logging.getLogger().handlers[0].flush()
-        time.sleep(0.5)
-        print()
-
+    started = time.time()
     dark_cc = load_cc_file(f"../game_files/dos/DARK.CC",  MAMVersion.DARKSIDE, Platform.PC_DOS)
     # ccf_dark_cc.bootstrap()
     dark_cur = load_cc_file(f"../game_files/dos/DARK.CUR", MAMVersion.DARKSIDE, Platform.PC_DOS)
@@ -579,6 +577,8 @@ def main():
     mm5_cc = dark_cc.merge(dark_cur)
     mm5_cc.bootstrap()
     mm5_cc.bake()
+    finished = time.time() - started
+    print(f"Finished in {finished:.1f} seconds")
 
 
     # ccf_intro_cc = load_cc_file(f"../game_files/dos/INTRO.CC", MAMVersion.DARKSIDE, Platform.PC_DOS)

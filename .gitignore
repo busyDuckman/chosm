@@ -4,6 +4,7 @@ game_files/**/*.CUR
 game_files/**/*.cc
 game_files/**/*.cur
 game_files/baked/
+tiled_projects/
 .idea/
 env/
 build/
