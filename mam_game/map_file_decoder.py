@@ -1,73 +1,11 @@
-import glob
 import io
-import itertools
-import json
-import os.path
-import textwrap
-from dataclasses import dataclass, asdict
-from os.path import join
-from typing import List, Dict, Tuple, Any
+from typing import List
 
-import imageio
-import slugify
-from PIL import Image
-
-import helpers.pil_image_helpers as pih
+from chosm.map_asset import MapAsset
+from chosm.sprite_asset import SpriteAsset
 from game_engine.map import Map, Tile
-from helpers.misc import is_continuous_integers
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, map_slug, spell_slug, RawFile, Direction
-from mam_game.mam_file import MAMFile
 import helpers.stream_helpers as sh
-import helpers.color as ch
-from mam_game.pal_file import PalFile
-from mam_game.sprite_file import SpriteFile
-
-
-class MapFile(MAMFile):
-    def __init__(self, file_id,
-                 name,
-                 game_map: Map,
-                 tile_set: SpriteFile
-                 ):
-        super().__init__(file_id, name)
-        self.game_map = game_map
-        self.tile_set: SpriteFile = tile_set
-
-    def __str__(self):
-        return f"Palette File: id={self.file_id} num_cols={len(self.colors)}"
-
-    def get_type_name(self):
-        return "map"
-
-    def _gen_preview_image(self, preview_size) -> Image.Image:
-        return self.gen_2d_map().resize((preview_size, preview_size), Image.NEAREST)
-
-    def gen_2d_map(self):
-        w = self.game_map.width * self.tile_set.width
-        h = self.game_map.height * self.tile_set.height
-        map_img = Image.new("RGB", size=(w, h))
-
-        for x, y in itertools.product(range(self.game_map.width), range(self.game_map.height)):
-            x_pos, y_pos = (x * self.tile_set.width, y * self.tile_set.height)
-            frame_idx = self.game_map[x, y].idx_ground
-            frame = self.tile_set.frames[frame_idx]
-            map_img.paste(frame, (x_pos, y_pos), frame)
-
-        return map_img
-
-    def bake(self, file_path):
-        super().bake(file_path)
-
-        d = self.game_map.asdict()
-        d |= {
-            "tileset_slug": self.tile_set.slug,
-            "tileset_name": self.tile_set.name,
-            }
-
-        with open(join(file_path, "map.json"), "wt") as f:
-            json.dump(d, f)
-
-
 
 def get_luts():
     mm5_surface_lut = [
@@ -152,12 +90,12 @@ def read_map_meta_data(f):
 def load_map_file(maze_dat: RawFile,
                   maze_mob: RawFile,
                   maze_evt: RawFile,
-                  tile_sets: List[SpriteFile],
+                  tile_sets: List[SpriteAsset],
                   ver: MAMVersion,
                   platform: Platform,
                   map_width = 16,
                   map_height = 16
-                  ) -> MapFile:
+                  ) -> MapAsset:
     total_tiles = map_width * map_height
 
     mm5_surface_lut, mm4_surface_lut, env_lut = get_luts()
@@ -209,5 +147,5 @@ def load_map_file(maze_dat: RawFile,
     tileset_name = "outdoor.til"
     map_id = int("".join([c for c in maze_dat.file_name if c.isdigit()]))
     tile_set = [t for t in tile_sets if t.name == tileset_name][0]
-    map_file = MapFile(map_id, f"maze.nam_{map_id}", the_map, tile_set)
+    map_file = MapAsset(map_id, f"maze.nam_{map_id}", the_map, tile_set)
     return map_file
