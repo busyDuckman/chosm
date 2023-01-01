@@ -39,6 +39,9 @@ class Map:
         self.height = h
         self._map = [Tile(0, 0, 0, 0, 0) for _ in range(self.width * self.height)]
 
+    def size(self):
+        return self.width, self.height
+
     def __getitem__(self, pos):
         x, y = pos
         return self._map[y*self.width+x]

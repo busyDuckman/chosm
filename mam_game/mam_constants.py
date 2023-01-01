@@ -39,10 +39,13 @@ class RawFile:
 
 class MAMFileParseError(Exception):
     def __init__(self, raw_file: RawFile, message):
-        self.file_id = str(raw_file.file_id)
-        self.file_name = str(raw_file.file_name)
-        message = str(message)
-        self.message = f"File parse error: file_id={self.file_id}, file={self.file_name}, error='{message}'"
+        if raw_file is None:
+            self.message = f"File parse error: error='{message}'"
+        else:
+            self.file_id = str(raw_file.file_id)
+            self.file_name = str(raw_file.file_name)
+            message = str(message)
+            self.message = f"File parse error: file_id={self.file_id}, file={self.file_name}, error='{message}'"
         super().__init__(self.message)
 
 
@@ -51,11 +54,6 @@ def normalise_file_name(name: str):
     To assist in using file names as keys in dictionaries etc.
     """
     return name.strip().lower()
-
-
-def map_slug(maze_id: int):
-    maze_id = int(maze_id)
-    return f"map_{maze_id:08}"
 
 
 def spell_slug(spell_name: str):

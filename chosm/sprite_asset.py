@@ -154,7 +154,7 @@ class SpriteAsset(Asset):
         for a in self.animations.values():
             loop_token = "infinite" if a.loop else "1"
             num_frames = len(a.frame_idx_list)
-            sprite_sheet_url = f"anim_{a.slug}.png"
+            sprite_sheet_url = f"_anim_{a.slug}.png"
 
             cls_txt = f"""
                 .anim_{self.slug}_{a.slug} {{
@@ -209,7 +209,7 @@ class SpriteAsset(Asset):
 
             # frames to match the css animation
             anim_sheet = pih.join_images(frames, mode="RGBA", bg_col=[0, 0, 0, 0])
-            anim_sheet.save(join(file_path, f"anim_{anim.slug}.png"))
+            anim_sheet.save(join(file_path, f"_anim_{anim.slug}.png"))
 
             # animated gif (seems prone to issues and has no transparency)
             # with open(join(file_path, f"anim_{anim.slug}.gif"), 'wb') as f:
@@ -220,10 +220,10 @@ class SpriteAsset(Asset):
 
         # sprite sheet
         sprite_sheet = pih.join_images(self.frames, mode="RGBA", bg_col=[0, 0, 0, 0])
-        sprite_sheet.save(join(file_path, "sprite_sheet.png"))
+        sprite_sheet.save(join(file_path, "_sprite_sheet.png"))
 
         css = self._gen_css()
-        with open(join(file_path, "animation.css"), "wt") as f:
+        with open(join(file_path, "_animation.css"), "wt") as f:
             f.write(css)
 
         # pl = ffmpeg.input(os.path.join(file_path, "frame_*.png"), pattern_type='glob', framerate=self.frame_rate)
