@@ -3,7 +3,7 @@
 <head>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='general.css') }}"/>
     <meta charset="UTF-8">
-    <link href="{{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name="animation.css") }}"
+    <link href="{{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name="_animation.css") }}"
      rel="stylesheet">
 </head>
 
@@ -16,7 +16,7 @@
         </div>
 
         <div style="overflow: scroll">
-            <img src="{{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name="sprite_sheet.png")  }}">
+            <img src="{{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name="_sprite_sheet.png")  }}">
         </div>
     </div>
 </div>

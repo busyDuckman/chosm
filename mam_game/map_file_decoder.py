@@ -1,10 +1,10 @@
 import io
-from typing import List
+from typing import List, Dict
 
 from chosm.map_asset import MapAsset
 from chosm.sprite_asset import SpriteAsset
 from game_engine.map import Map, Tile
-from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, map_slug, spell_slug, RawFile, Direction
+from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, spell_slug, RawFile, Direction
 import helpers.stream_helpers as sh
 
 def get_luts():
@@ -35,12 +35,11 @@ def get_luts():
 def read_map_meta_data(f):
     # 2 bytes: mazenumber, uint16 value indicating this map ID
     maze_id = sh.read_uint16(f)
-    maze_slug = map_slug(maze_id)
 
     # 8 bytes, uint16 mazes_id's to the N, E, S, W
     joining_map_ids = sh.read_uint16_array(f, 4)
     order = [Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST]
-    joining_map_slugs = {d: map_slug(x) for d, x in zip(order, joining_map_ids)}
+    joining_map_ids = {d: x for d, x in zip(order, joining_map_ids)}
 
     # 2 bytes: mazeFlags
     # 2 bytes: mazeFlags2
@@ -65,7 +64,7 @@ def read_map_meta_data(f):
     # 1 byte: floor type, the default floor type (lookup table, used by indoor maps)
     default_floor_type = sh.read_byte(f)
 
-    return maze_slug, joining_map_slugs, restricted_spells, can_rest, can_save, is_dark, is_outside, \
+    return maze_id, joining_map_ids, restricted_spells, can_rest, can_save, is_dark, is_outside, \
            wall_type_lut, surface_type_lut, default_floor_type
 
 
@@ -87,6 +86,52 @@ def read_map_meta_data(f):
     # 32 bytes: 16x16 bit array indicating which tiles have been "stepped on"
 
 
+class MAMMapAsset(MapAsset):
+    def __init__(self, file_id,
+                 name,
+                 game_map: Map,
+                 tile_set: SpriteAsset,
+                 joining_map_ids, restricted_spells,
+                 can_rest, can_save, is_dark, is_outside):
+        super().__init__(file_id, name, game_map, tile_set)
+        self.joining_map_ids = joining_map_ids
+        self.restricted_spells = restricted_spells
+        self.can_rest = can_rest
+        self.can_save = can_save
+        self.is_dark = is_dark
+        self.is_outside = is_outside
+        self.map_pos_x = 0
+        self.map_pos_y = 0
+
+    def pos(self):
+        return self.map_pos_x, self.map_pos_y
+
+    def is_top_left(self):
+        return self.joining_map_ids[Direction.NORTH] == 0 and self.joining_map_ids[Direction.WEST] == 0
+
+    def as_map_asset(self):
+        return MapAsset(self.file_id, self.name, self.game_map, self.tile_set)
+
+    def walk(self, joined_maps_by_id: Dict, direction: Direction):
+        current = self
+        next_id = "not zero"
+        maps_seen = set()
+        while True:
+            yield current
+
+            next_id = current.joining_map_ids[direction]
+            if next_id == 0:
+                break
+
+            if next_id in maps_seen:
+                raise MAMFileParseError(None, "Maps set loops infinitely")
+            maps_seen.add(next_id)
+
+            if next_id not in joined_maps_by_id:
+                raise MAMFileParseError(None, f"Map id not found: id = {next_id}")
+            current = joined_maps_by_id[next_id]
+
+
 def load_map_file(maze_dat: RawFile,
                   maze_mob: RawFile,
                   maze_evt: RawFile,
@@ -104,7 +149,7 @@ def load_map_file(maze_dat: RawFile,
     elif ver == MAMVersion.DARKSIDE:
         surface_lut = mm5_surface_lut
     else:
-        raise MAMFileParseError(0,"", "Unsupported MAM version for maps")
+        raise MAMFileParseError(0, "", "Unsupported MAM version for maps")
 
     f = io.BytesIO(bytearray(maze_dat.data))
     # from: https://xeen.fandom.com/wiki/MAZExxxx.DAT_File_Format
@@ -115,7 +160,7 @@ def load_map_file(maze_dat: RawFile,
     map_flags = sh.read_byte_array(f, total_tiles)
 
     # Read the rest of the file
-    maze_slug, joining_map_slugs, restricted_spells, \
+    maze_slug, joining_map_ids, restricted_spells, \
         can_rest, can_save, is_dark, is_outside, \
         wall_type_lut, surface_type_lut, default_floor_type = read_map_meta_data(f)
 
@@ -145,7 +190,12 @@ def load_map_file(maze_dat: RawFile,
             the_map[x, map_height - y - 1] = tile
 
     tileset_name = "outdoor.til"
+    # From the wiki: take the map_id from the filename, not the value in the file
     map_id = int("".join([c for c in maze_dat.file_name if c.isdigit()]))
     tile_set = [t for t in tile_sets if t.name == tileset_name][0]
-    map_file = MapAsset(map_id, f"maze.nam_{map_id}", the_map, tile_set)
+    map_file = MAMMapAsset(map_id, f"map_{map_id:04d}", the_map, tile_set,
+                        joining_map_ids, restricted_spells,
+                        can_rest, can_save, is_dark, is_outside
+                        )
     return map_file
+

@@ -18,9 +18,12 @@ from slugify import slugify
 from numba import njit
 
 import helpers.stream_helpers as sh
+from chosm.asset import Asset
+from chosm.map_asset import MapAsset
 from chosm.sprite_asset import SpriteAsset
 from mam_game.binary_file import load_bin_file
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, normalise_file_name
+from mam_game.mam_map_organiser import combine_map_assets
 from mam_game.map_file_decoder import RawFile, load_map_file
 from mam_game.mmorpg_constants import default_new_policy
 from mam_game.npc_db_decoder import load_monster_database_file
@@ -91,12 +94,16 @@ class CCFile:
         # A chained file is like an include or import. ie: The file contains assets needed to load this file.
         self.chained_files: Dict = {}
 
-        self._resources: List[MamAsset] = []
+        self._resources: List[Asset] = []
 
-    def merge(self, other):
+    def merge(self, other, to_copy=True):
         other: CCFile = other
         print(f"Merging {self.file} and {other.file}")
-        merged = copy.deepcopy(self)
+        if to_copy:
+            merged = copy.deepcopy(self)
+        else:
+            merged = self
+
         if os.path.splitext(merged.file)[0] == os.path.splitext(other.file)[0]:
             merged.file += os.path.splitext(other.file)[1].strip(".")
         else:
@@ -112,7 +119,6 @@ class CCFile:
         merged._resources += other._resources
 
         return merged
-
 
 
     def get_resources(self, res_type: Type, glob_epr: str = None):
@@ -479,6 +485,7 @@ class CCFile:
         print([s for s in self._toc_file_names if '.mob' in s])
         print(f"  - loading {len(maps)} maps: ", end="")
         # tile_sets = ["cave.til", "cstl.til", "dung.til", "outdoor.til", "town.til",  "scfi.til",  "towr.til"]
+        map_assets = []
         for f_name in maps:
             print(f_name)
             raw_dat = self._raw_data_lut[f_name]
@@ -489,12 +496,15 @@ class CCFile:
                 raw_mob = self._raw_data_lut[mob_file_name]
                 raw_evt = self._raw_data_lut[evt_file_name]
                 map_file = load_map_file(raw_dat, raw_mob, raw_evt, tile_sets, self.mam_version, self.mam_platform)
-                self._resources.append(map_file)
+                map_assets.append(map_file)
             else:
                 print("Expected a mob file: " + mob_file_name)
                 map_file = load_map_file(raw_dat, None, None, tile_sets, self.mam_version, self.mam_platform)
-                self._resources.append(map_file)
+                map_assets.append(map_file)
+
+        self._resources.extend(combine_map_assets(map_assets, self.mam_version, self.mam_platform))
         print()
+
 
     def bake(self, bake_dir=None):
         """
@@ -575,7 +585,7 @@ def main():
     # ccf_dark_cc.bootstrap()
     dark_cur = load_cc_file(f"../game_files/dos/DARK.CUR", MAMVersion.DARKSIDE, Platform.PC_DOS)
 
-    mm5_cc = dark_cc.merge(dark_cur)
+    mm5_cc = dark_cc.merge(dark_cur, to_copy=False)
     mm5_cc.bootstrap()
     mm5_cc.bake()
     finished = time.time() - started

@@ -4,14 +4,14 @@
 {% set tiles  = map["map"] %}
 {% set tileset_name = map["tileset_name"] %}
 {% set tileset_info = pack.get_info(tileset_name) %}
-{% set sprite_sheet = url_for('get_file', pack_name=pack_name, resource_name=tileset_name, file_name="sprite_sheet.png") %}
+{% set sprite_sheet = url_for('get_file', pack_name=pack_name, resource_name=tileset_name, file_name="_sprite_sheet.png") %}
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='general.css') }}"/>
-    <link href="{{ url_for('get_file', pack_name=pack_name, resource_name=tileset_name, file_name="animation.css") }}"
+    <link href="{{ url_for('get_file', pack_name=pack_name, resource_name=tileset_name, file_name="_animation.css") }}"
      rel="stylesheet">
 </head>
 <body class="window_bg">
@@ -20,23 +20,25 @@
     <div class="window_title">
     Map Tile Data "Name" ({{ width }} x {{ height }})
     </div>
-    <table cellspacing="0" style="text-align: center; font-size: 12px">
-            {% for y in range(height) %}
-                <tr style="height: 28px">
-                    {% for x in range(width) %}
-                        {% set pos = x + y * width %}
-                        <td style="border: 1px solid">
-                            {% set idx_ground = tiles[pos]["idx_ground"] %}
-                            {% set idx_object = tiles[pos]["idx_object"] %}
-                            {% set idx_map_tile = tiles[pos]["idx_map_tile"] %}
-                            {% set idx_map_icon = tiles[pos]["idx_map_icon"] %}
-                            {{ idx_ground }}, {{ idx_object }}<br>
-                            {{ idx_map_tile }}, {{ idx_map_icon }}
-                        </td>
-                    {% endfor %}
-                </tr>
-            {% endfor %}
-        </table>
+    <div style="overflow: scroll; height: 400px">
+        <table cellspacing="0" style="text-align: center; font-size: 12px">
+                {% for y in range(height) %}
+                    <tr style="height: 28px">
+                        {% for x in range(width) %}
+                            {% set pos = x + y * width %}
+                            <td style="border: 1px solid">
+                                {% set idx_ground = tiles[pos]["idx_ground"] %}
+                                {% set idx_object = tiles[pos]["idx_object"] %}
+                                {% set idx_map_tile = tiles[pos]["idx_map_tile"] %}
+                                {% set idx_map_icon = tiles[pos]["idx_map_icon"] %}
+                                {{ idx_ground }}, {{ idx_object }}<br>
+                                {{ idx_map_tile }}, {{ idx_map_icon }}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </table>
+    </div>
 </div>
 
 <div class="sub_window_border">
@@ -52,7 +54,7 @@
     <div class="window_title">
     Map Render
     </div>
-    <div style="overflow: scroll">
+    <div style="overflow: scroll; height: 400px">
         <div style="position: relative; width: {{ width * 32 }}px; height: {{ width * 32 }}px">
             {% for y in range(height) %}
                 {% for x in range(width) %}

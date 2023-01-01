@@ -1,9 +1,4 @@
-# AssetRecord:
-#   - store metadata for the viewer and editor
-#   - store a slug representing the folder
-#   - stack to override each other
-#   - validate their own structure
-#   - can bootstrap a AssetHolder from primary files
+
 import datetime
 import json
 import os
@@ -12,8 +7,18 @@ from os.path import join
 from PIL import Image
 from slugify import slugify
 
+# AssetRecord:
+#   - built for use by the web server
+#   - store metadata for the viewer and editor
+#   - store a slug representing the folder
+#   - stack to override each other
+#   - validate their own structure
+#   - can bootstrap an Asset from primary files
 
 # Asset:
+#   - built for use by software creating graphics for the game.
+#     - Might and magic asset import scripts
+#     - Sprite resize & creation AI
 #   - can be created from in memory objects
 #   - holds raw data, such as images and sound in memory
 #   - can perform operations on the data
