@@ -485,13 +485,13 @@ class CCFile:
         print([s for s in self._toc_file_names if '.mob' in s])
         print(f"  - loading {len(maps)} maps: ", end="")
         # tile_sets = ["cave.til", "cstl.til", "dung.til", "outdoor.til", "town.til",  "scfi.til",  "towr.til"]
+        tile_sets = self.get_resources(SpriteAsset, "*.til")
         map_assets = []
         for f_name in maps:
             print(f_name)
             raw_dat = self._raw_data_lut[f_name]
             mob_file_name = f_name.replace(".dat", ".mob")
-            evt_file_name = f_name.replace(".dat", ".mob")
-            tile_sets = self.get_resources(SpriteAsset, "*.til")
+            evt_file_name = f_name.replace(".dat", ".evt")
             if mob_file_name in self._raw_data_lut:
                 raw_mob = self._raw_data_lut[mob_file_name]
                 raw_evt = self._raw_data_lut[evt_file_name]
