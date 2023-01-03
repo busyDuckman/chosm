@@ -35,7 +35,7 @@ class MapAsset(Asset):
 
         for x, y in itertools.product(range(self.game_map.width), range(self.game_map.height)):
             x_pos, y_pos = (x * self.tile_set.width, y * self.tile_set.height)
-            frame_idx = self.game_map[x, y].idx_ground
+            frame_idx = self.game_map[x, y, "ground"]
             frame = self.tile_set.frames[frame_idx]
             map_img.paste(frame, (x_pos, y_pos), frame)
 

@@ -164,7 +164,7 @@ def load_map_file(maze_dat: RawFile,
         can_rest, can_save, is_dark, is_outside, \
         wall_type_lut, surface_type_lut, default_floor_type = read_map_meta_data(f)
 
-    the_map = Map(map_width, map_height)
+    the_map = Map(map_width, map_height, 4, ["ground", "object", "map_tile", "map_icon"])
 
     # create the map
     for y in range(map_height):
@@ -186,7 +186,7 @@ def load_map_file(maze_dat: RawFile,
             has_object = (m_flag & 0x08) != 0
             _ = (m_flag & 0x07)  # number of monsters, unused
 
-            tile = Tile(base, middle, map_top, map_overlay, 0)
+            tile = Tile(0, base, middle, map_top, map_overlay)
             the_map[x, map_height - y - 1] = tile
 
     tileset_name = "outdoor.til"

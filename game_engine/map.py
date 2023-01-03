@@ -1,7 +1,8 @@
+import copy
 import itertools
 from dataclasses import dataclass, asdict
 from enum import Enum, IntFlag
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 import numpy as np
 
@@ -23,28 +24,60 @@ import numpy as np
 #     idx_map_tile: int
 #     idx_map_icon: int
 
-@dataclass
-class Tile:
-    idx_ground:   int
-    idx_object:   int
-    idx_map_tile: int
-    idx_map_icon: int
-    height: int
 
+class Tile:
+    def __init__(self, height, *kwargs):
+        self.height: int = height
+        self.layers: List[int] = list(kwargs)
+
+    def asdict(self):
+        return {
+            "height": self.height,
+            "layers": self.layers
+        }
+
+# ["ground", "object", "map_tile", "map_icon"]
 
 class Map:
     # a grid based map
-    def __init__(self, w, h):
-        self.width = w
-        self.height = h
-        self._map = [Tile(0, 0, 0, 0, 0) for _ in range(self.width * self.height)]
+    def __init__(self, w, h, num_layers, layer_names=None):
+        if num_layers <= 0:
+            raise ValueError("numer of layers must be > 0")
+
+        self.width: int = w
+        self.height: int = h
+        self._map: List[Tile] = [Tile(0, 0, 0, 0, 0) for _ in range(self.width * self.height)]
+        self.num_layers: int = num_layers
+        self._layer_names: List[str]
+        self._layer_lut: Dict[str, int] = {}
+        if layer_names is None:
+            self.layer_names = [f"layer_{i:02d}" for i in range(num_layers)]
+        else:
+            if len(layer_names) != num_layers:
+                raise ValueError("numer of layer names != number of layers")
+            ln = copy.copy(layer_names)  # TODO: do I want to normalise they layer names?
+            self.layer_names = ln
 
     def size(self):
         return self.width, self.height
 
+    @property
+    def layer_names(self):
+        return copy.copy(self._layer_names)
+
+    @layer_names.setter
+    def layer_names(self, value):
+        self._layer_names = value
+        self._layer_lut = {n: i for i, n in enumerate(self._layer_names)}
+
     def __getitem__(self, pos):
-        x, y = pos
-        return self._map[y*self.width+x]
+        if len(pos) == 2:
+            x, y = pos
+            return self._map[y * self.width + x]
+        if len(pos) == 3:
+            x, y, layer_name = pos
+            layer_num = self._layer_lut[layer_name]
+            return self._map[y * self.width + x].layers[layer_num]
 
     def __setitem__(self, pos, value):
         x, y = pos
@@ -60,9 +93,10 @@ class Map:
     def asdict(self):
         d = {"width": self.width,
              "height": self.height,
-             "map": [asdict(tile) for tile in self._map]
+             "num_layers": self.num_layers,
+             "layer_names": self.layer_names,
+             "map": [tile.asdict() for tile in self._map]
              }
-
         return d
 
 
@@ -93,9 +127,3 @@ class MapInstance:
 #      int wallKind;
 #      int tavernTips;
 #      Point runPos;
-
-def main():
-    map = Map(10, 10)
-
-if __name__ == '__main__':
-    main()

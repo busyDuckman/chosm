@@ -40,7 +40,9 @@ def to_single_map(sorted_maps: List[MAMMapAsset], width_super_map, height_super_
     # just use the attributes from the top left. for now
     # TODO: Does this shortcut (assuming all maps have the ame attributes) matter?
     merged_map = copy.copy(sorted_maps[0])
-    merged_map.game_map = Map(width_super_map * sub_map_width, height_super_map * sub_map_height)
+    gm = merged_map.game_map
+    merged_map.game_map = Map(width_super_map * sub_map_width, height_super_map * sub_map_height,
+                              gm.num_layers, gm._layer_names)
 
     for sub_map in sorted_maps:
         # if sub_map.map_pos_x != 0:
