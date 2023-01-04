@@ -5,6 +5,8 @@ import fnmatch
 from functools import lru_cache
 from typing import Dict
 
+from game_engine.map import Map, load_map_from_dict
+
 
 class ResourcePack:
     def __init__(self, base_uri):
@@ -104,4 +106,10 @@ class ResourcePack:
             lines = [q for q in lines if len(q.strip()) > 0]
 
         return lines
+
+    def load_map_from_resource(self, resource_name) -> Map:
+        d = self.load_json_file_from_resource(resource_name, "map.json")
+        the_map = load_map_from_dict(d)
+        return the_map
+
 

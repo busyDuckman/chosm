@@ -3,7 +3,7 @@ import itertools
 from typing import List
 
 from chosm.map_asset import MapAsset
-from game_engine.map import Map, Tile
+from game_engine.map import Map
 from mam_game.mam_constants import Direction, MAMVersion, Platform, MAMFileParseError
 from mam_game.map_file_decoder import MAMMapAsset
 

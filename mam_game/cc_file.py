@@ -477,8 +477,14 @@ class CCFile:
                 layer3, layer4 = rest.split(16, left_name=sprite.name + "_layer_02")
 
             else:
+                # outdoor.til handled a bit differently
                 sprite = sprite.crop(0, 0, 10, 8)
+                ground, rest = sprite.split(16, left_name="outdoor_tile_ground.til")
+                env, building = rest.split(16, left_name="outdoor_tile_env.til", right_name="outdoor_tile_building.til")
                 self._resources.append(sprite)
+                self._resources.append(ground)
+                self._resources.append(env)
+                self._resources.append(building)
 
         maps = fnmatch.filter(self._toc_file_names, "m*.dat")
         print([s for s in self._toc_file_names if '.dat' in s])
@@ -533,7 +539,7 @@ class CCFile:
                 "policy": default_new_policy("duckman").to_dict()}
 
         with open(os.path.join(bake_path, "info.json"), 'w') as f:
-            json.dump(info, f)
+            json.dump(info, f, indent=2)
 
         # bake all the files
         print(f"  - baking {len(self._resources)} resources: ", end="")
