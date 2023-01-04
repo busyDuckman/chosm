@@ -6,6 +6,9 @@ from typing import Dict, Tuple, List
 
 import numpy as np
 
+from helpers.archetyped_table import ArchetypedTable
+
+
 #
 # class TileFlags(IntFlag):
 #     FACE_N:    0b0000_0000
@@ -25,16 +28,16 @@ import numpy as np
 #     idx_map_icon: int
 
 
-class Tile:
-    def __init__(self, height, *kwargs):
-        self.height: int = height
-        self.layers: List[int] = list(kwargs)
-
-    def asdict(self):
-        return {
-            "height": self.height,
-            "layers": self.layers
-        }
+# class Tile:
+#     def __init__(self, height, *kwargs):
+#         self.height: int = height
+#         self.layers: List[int] = list(kwargs)
+#
+#     def asdict(self):
+#         return {
+#             "height": self.height,
+#             "layers": self.layers
+#         }
 
 # ["ground", "object", "map_tile", "map_icon"]
 
@@ -44,19 +47,25 @@ class Map:
         if num_layers <= 0:
             raise ValueError("numer of layers must be > 0")
 
+        self.num_layers = num_layers
         self.width: int = w
         self.height: int = h
-        self._map: List[Tile] = [Tile(0, 0, 0, 0, 0) for _ in range(self.width * self.height)]
-        self.num_layers: int = num_layers
-        self._layer_names: List[str]
-        self._layer_lut: Dict[str, int] = {}
+        # self._map: List[Tile] = [Tile(0, 0, 0, 0, 0) for _ in range(self.width * self.height)]
+        # self.num_layers: int = num_layers
+        # self._layer_names: List[str]
+        # self._layer_lut: Dict[str, int] = {}
         if layer_names is None:
-            self.layer_names = [f"layer_{i:02d}" for i in range(num_layers)]
+            self.layer_names = tuple([f"layer_{i:02d}" for i in range(num_layers)])
         else:
             if len(layer_names) != num_layers:
                 raise ValueError("numer of layer names != number of layers")
             ln = copy.copy(layer_names)  # TODO: do I want to normalise they layer names?
-            self.layer_names = ln
+            self.layer_names = tuple(ln)
+
+        self._map = ArchetypedTable({n: 0 for n in layer_names}, self.width * self.height)
+
+    def recompress_map(self):
+        self._map = ArchetypedTable(self._map, lru_cache_size=self._map.lru_cache_size)
 
     def size(self):
         return self.width, self.height
@@ -76,8 +85,16 @@ class Map:
             return self._map[y * self.width + x]
         if len(pos) == 3:
             x, y, layer_name = pos
-            layer_num = self._layer_lut[layer_name]
-            return self._map[y * self.width + x].layers[layer_num]
+            return self._map[y * self.width + x, layer_name]
+        raise KeyError()
+
+        # if len(pos) == 2:
+        #     x, y = pos
+        #     return self._map[y * self.width + x]
+        # if len(pos) == 3:
+        #     x, y, layer_name = pos
+        #     layer_num = self._layer_lut[layer_name]
+        #     return self._map[y * self.width + x].layers[layer_num]
 
     def __setitem__(self, pos, value):
         x, y = pos
@@ -95,35 +112,21 @@ class Map:
              "height": self.height,
              "num_layers": self.num_layers,
              "layer_names": self.layer_names,
-             "map": [tile.asdict() for tile in self._map]
+             "map": list(self._map)
              }
         return d
 
 
+def load_map_from_dict(d) -> Map:
+    # note "map.json" is Map.asdict() with an extra "layer_sprites" key entered for sprite location.
+    w = d["width"]
+    h = d["height"]
+    num_layers = d["num_layers"]
+    layer_names = d["layer_names"]
+    map_tiles = d["map"]
+    the_map = Map(w, h, num_layers, layer_names)
+    for x, y in itertools.product(range(w), range(h)):
+        the_map[x, y] = map_tiles[(y * w) + x]
+    return the_map
 
-class MapInstance:
-    def __init__(self, base_map: Map):
-        self.base_map: Map = base_map
-        self.modified_tiles: Dict[Tuple[int, int], Tile] = {}
 
-#      int[] joiningMaps;
-#      List<String> cantCastList;
-#      boolean canRest;
-#      boolean canSave;
-#      boolean[] miscFlags;
-#      boolean isDark;
-#      boolean isOutdoors;
-#     //private MaMSprite tilesSprite;
-#      int floorType;
-#      int wallNoPass;
-#      int surfNoPass;
-#      int unlockDoor;
-#      int unlockBox;
-#      int bashDoor;
-#      int bashGrate;
-#      int bashWall;
-#      int chanceToRun;
-#      int trapDamage;
-#      int wallKind;
-#      int tavernTips;
-#      Point runPos;

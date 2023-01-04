@@ -1,7 +1,7 @@
 import collections.abc
 import copy
-from abc import abstractmethod
-from typing import Dict, Any, overload, Sequence, Literal, List, Union, Tuple
+from functools import reduce
+from typing import Dict, Any, List, Union, Tuple, overload, Iterable, MutableSequence
 import statistics
 
 from boltons.cacheutils import LRU
@@ -9,16 +9,59 @@ from threading import Lock
 from abc import ABC, abstractmethod
 
 
+def _quacks_like_a_list(something):
+    """
+    The things supported as input lists
+    """
+    try:
+        import numpy as np
+        return isinstance(something, (list, DifferenceTable, collections.abc.Sequence, np.ndarray))
+    except ImportError:
+        return isinstance(something, (list, DifferenceTable, collections.abc.Sequence))
+
+# TODO: for later
+# class ICantBelieveItsNotAListOfDicts(collections.abc.MutableSequence):
+#     def insert(self, index: int, value: _T) -> None:
+#         pass
+#
+#     def __init__(self, list_of_dicts: List[Dict], default_value=None):
+#         self.col_headings = tuple(sorted(list(reduce(lambda s, r: s.union(r.keys()), list_of_dicts, set()))))
+#         self._column_to_idx_lut = {key: i for i, key in enumerate(self.col_headings)}
+#         self._idx_to_column_lut = {i: k for k, i in self._column_to_id_lut.items()}
+#         self._default_value = default_value
+#         self._table = [self._dict_to_list(row) for row in list_of_dicts]
+#
+#     def _dict_to_list(self, d: dict):
+#         return [d.get(c, self._default_value) for c in self.col_headings]
+#
+#     def __getitem__(self, index: int) -> _T: ...
+#
+#     def __setitem__(self, index: int, value: _T) -> None: ...
+#
+#     def __delitem__(self, index: int) -> None: ...
+#
+#     def __len__(self) -> int:
+#         pass
+#
+#     # is this from the insert?
+#     def extend(self, values: Iterable[_T]) -> None: ...
+
+
 # TODO: collections.ChainMap may help in future iterations of this code.
 class DifferenceTable(ABC, collections.abc.Sequence):
+    """
+    Abstract class for tables that store alterations to a reference table.
+    """
     def __init__(self, col_headings: List[str], lru_cache_size: int = 10_000):
         self._lru_cache = LRU(max_size=lru_cache_size) if lru_cache_size > 0 else None
-        self._num_cols = len(col_headings)
-        self._table = []
         self.col_headings = col_headings
+        self._num_cols = len(self.col_headings)
+        self._table = []
 
         self._column_to_id_lut = {key: i for i, key in enumerate(self.col_headings)}
         self._id_to_column_lut = {i: k for k, i in self._column_to_id_lut.items()}
+
+        self.lru_cache_size = lru_cache_size
 
         self._lock = Lock()
 
@@ -108,7 +151,8 @@ class DifferenceTable(ABC, collections.abc.Sequence):
 
             # remove the cached version
             if self._lru_cache is not None:
-                del self._lru_cache[row_index]
+                if row_index in self._lru_cache:
+                    del self._lru_cache[row_index]
 
     def __len__(self) -> int:
         with self._lock:
@@ -132,7 +176,9 @@ class DifferenceTable(ABC, collections.abc.Sequence):
 
 class InstanceTable(DifferenceTable):
     def __init__(self, reference_table: List[Dict[str, Any]], lru_cache_size: int = 1_000):
-        # TODO: internalise with an list of lists, not a list of dicts.
+        # TODO: internalise with a list of lists, not a list of dicts.
+        #       but do so in a way that does not destroy: InstanceTable(ArchetypedTable(map.tiles))
+        #       see stub for ICantBelieveItsNotAListOfDicts
         self._reference_table = reference_table
         col_names = []
         if len(reference_table) > 0:
@@ -169,7 +215,7 @@ class ArchetypedTable(DifferenceTable):
                                                         self._default_row.items()}
             self._table = [{} for _ in range(initial_table_length)]
 
-        elif isinstance(default_row_or_existing_table, list):
+        elif _quacks_like_a_list(default_row_or_existing_table):
             # Find the mode of each column to determine the best^ default key.
             #   ^ best ignoring size difference of various values.
             existing_table: List[Dict[str, Any]] = default_row_or_existing_table
@@ -200,6 +246,7 @@ class ArchetypedTable(DifferenceTable):
 
 
 def main():
+    # TODO: formal test cases
     tbl = ArchetypedTable({"height": -1, "surface": 0, "is_water": False}, 3, lru_cache_size=0)
     tbl[1] = {"height": 10, "surface": 3}
     tbl[-1, "is_water"] = True
@@ -209,11 +256,17 @@ def main():
     print("tbl[0]:", tbl[0])
     print("tbl[-1, height]:", tbl[-1, "height"])
     # print(len(tbl))
-    print("attempting list")
     print(list(tbl[2:4]))
 
     print()
     tbl.print()
+    print(tbl.get_difference_table())
+    for _ in range(20):
+        tbl.append({"height": 5, "surface": 0})
+    # recompress
+    tbl = ArchetypedTable(tbl, lru_cache_size=tbl.lru_cache_size)
+    print(tbl.get_difference_table())
+    exit()
 
     import numpy as np
 
@@ -228,6 +281,7 @@ def main():
     ppl_arch_array = ArchetypedTable(ppl_array)
     ppl_arch_array.print()
     print(ppl_arch_array.get_difference_table())
+    print("isinstance(ppl_arch_array, list): ", isinstance(ppl_arch_array, list))
 
     print()
     print("Testing instance table")
@@ -237,7 +291,10 @@ def main():
     print(ppl_inst_array[3])
     print(ppl_inst_array.get_difference_table())
 
-
+    print()
+    print("Testing ICantBelieveItsNotAListOfDicts")
+    ppl_array.append({"foobar": 3})
+    # ICantBelieveItsNotAListOfDicts(ppl_array)
 
 if __name__ == '__main__':
     main()

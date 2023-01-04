@@ -1,9 +1,10 @@
 import io
+from dataclasses import dataclass, asdict
 from typing import List, Dict
 
 from chosm.map_asset import MapAsset
 from chosm.sprite_asset import SpriteAsset
-from game_engine.map import Map, Tile
+from game_engine.map import Map
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, spell_slug, RawFile, Direction
 import helpers.stream_helpers as sh
 
@@ -90,10 +91,10 @@ class MAMMapAsset(MapAsset):
     def __init__(self, file_id,
                  name,
                  game_map: Map,
-                 tile_set: SpriteAsset,
+                 layers: Dict[str, SpriteAsset],
                  joining_map_ids, restricted_spells,
                  can_rest, can_save, is_dark, is_outside):
-        super().__init__(file_id, name, game_map, tile_set)
+        super().__init__(file_id, name, game_map, layers)
         self.joining_map_ids = joining_map_ids
         self.restricted_spells = restricted_spells
         self.can_rest = can_rest
@@ -131,6 +132,26 @@ class MAMMapAsset(MapAsset):
                 raise MAMFileParseError(None, f"Map id not found: id = {next_id}")
             current = joined_maps_by_id[next_id]
 
+@dataclass
+class MaMTile:
+    # The CHOSM layer naming convention
+    height: int
+    ground: int    # iBase
+    surface: int   # iMiddle
+    wall: int      # iTop
+    env: int       # iTop
+    building: int  # iOverlay
+
+    # MaM specific Layers
+    has_grate: bool
+    no_rest: bool
+    has_drain: bool
+    has_event: bool
+    has_object: bool
+
+
+
+
 
 def load_map_file(maze_dat: RawFile,
                   maze_mob: RawFile,
@@ -164,7 +185,8 @@ def load_map_file(maze_dat: RawFile,
         can_rest, can_save, is_dark, is_outside, \
         wall_type_lut, surface_type_lut, default_floor_type = read_map_meta_data(f)
 
-    the_map = Map(map_width, map_height, 4, ["ground", "object", "map_tile", "map_icon"])
+    layers = list(MaMTile.__annotations__.keys())
+    the_map = Map(map_width, map_height, len(layers), layers)
 
     # create the map
     for y in range(map_height):
@@ -178,7 +200,7 @@ def load_map_file(maze_dat: RawFile,
             map_top =  (m_data>>8) & 0x0f
             map_overlay = (m_data>>12) & 0x0f
 
-            #5 flags and a 3 bit int.
+            # 5 flags and a 3 bit int.
             has_grate = (m_flag & 0x80) != 0
             no_rest = (m_flag & 0x40) != 0
             has_drain = (m_flag & 0x20) != 0
@@ -186,14 +208,39 @@ def load_map_file(maze_dat: RawFile,
             has_object = (m_flag & 0x08) != 0
             _ = (m_flag & 0x07)  # number of monsters, unused
 
-            tile = Tile(0, base, middle, map_top, map_overlay)
-            the_map[x, map_height - y - 1] = tile
+            #     height: int
+            #     ground: int    # iBase
+            #     surface: int   # iMiddle
+            #     wall: int      # iTop
+            #     env: int       # iTop
+            #     building: int  # iOverlay
 
-    tileset_name = "outdoor.til"
+
+            building = map_top
+            if map_top == 0 and map_overlay != 0:
+                building = map_overlay + 16
+
+            if map_top != 0 and map_overlay != 0:
+                print("arrrg")
+                exit(0)
+            #              h  gnd   surface, w, env,    building
+            tile = MaMTile(0, base, map_top, 0, middle, building,
+                           has_grate, no_rest, has_drain, has_event, has_object)
+            the_map[x, map_height - y - 1] = asdict(tile)
+
+    the_map.recompress_map()
+    # tileset_name = "outdoor.til"
+
+    layers = {"ground": "outdoor_tile_ground.til",
+              "env": "outdoor_tile_env.til",
+              "building": "outdoor_tile_building.til"}
+
+    layers = {k: next(t for t in tile_sets if t.name == f) for k, f in layers.items()}
+
     # From the wiki: take the map_id from the filename, not the value in the file
     map_id = int("".join([c for c in maze_dat.file_name if c.isdigit()]))
-    tile_set = [t for t in tile_sets if t.name == tileset_name][0]
-    map_file = MAMMapAsset(map_id, f"map_{map_id:04d}", the_map, tile_set,
+    # tile_set = [t for t in tile_sets if t.name == tileset_name][0]
+    map_file = MAMMapAsset(map_id, f"map_{map_id:04d}", the_map, layers,
                         joining_map_ids, restricted_spells,
                         can_rest, can_save, is_dark, is_outside
                         )
