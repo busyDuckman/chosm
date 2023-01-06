@@ -1,22 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='general.css') }}"/>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='/general.css') }}"/>
     <meta charset="UTF-8">
-    <link href="{{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name="_animation.css") }}"
+    <link href="{{ url_for('get_file', pack_name=pack_name, asset_name=asset_name, file_name="_animation.css") }}"
      rel="stylesheet">
 </head>
 
 <body class="window_bg" style="background-color: cadetblue">
 <div style="">
 
-    <div style="width: 600px" class="sub_window_border">
+    <div class="sub_window_border">
         <div class="window_title">
         Sprite Sheet ({{ info["num_frames"] }} frames)
         </div>
 
         <div style="overflow: scroll">
-            <img src="{{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name="_sprite_sheet.png")  }}">
+            <img src="{{ url_for('get_file', pack_name=pack_name, asset_name=asset_name, file_name="_sprite_sheet.png")  }}">
         </div>
     </div>
 </div>
@@ -54,8 +54,8 @@
     List of files in resource
     </div>
     <div style="overflow: auto; height: 200px; background-color:#a0a0a0">
-        {% for file in pack.get_resource_files(resource_name) %}
-          <a href=" {{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name=file) }}">{{ file }}</a><br>
+        {% for file in pack.get_resource_files(asset_name) %}
+          <a href=" {{ url_for('get_file', pack_name=pack_name, asset_name=asset_name, file_name=file) }}">{{ file }}</a><br>
         {% endfor %}
     </div>
 </div>

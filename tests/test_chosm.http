@@ -1,0 +1,12 @@
+### get resources
+GET http://localhost:8000/api/resource-management/packs
+Accept: application/json
+
+
+### get assets
+GET http://127.0.0.1:8000/api/resource-management/packs/dark-cccur-darkside-pc-dos/assets
+
+
+
+### get maps
+GET http://127.0.0.1:8000/api/resource-management/packs/dark-cccur-darkside-pc-dos/assets?glob=map_%2A

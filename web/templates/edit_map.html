@@ -1,24 +1,24 @@
 
 {# "map.json" is Map.asdict() with an extra "layer_sprites" key entered for sprite location.#}
 {# So we will load both ehte map opject, and the sprites record. #}
-{% set layers = pack.load_json_file_from_resource(resource_name, "map.json")["layer_sprites"] %}
-{% set map = pack.load_map_from_resource(resource_name) %}
+{% set layers = pack.load_json_file_from_resource(asset_name, "map.json")["layer_sprites"] %}
+{% set map = pack.load_map_from_resource(asset_name) %}
 {% set width  = map.width %}
 {% set height = map.height %}
 {#{% set tiles  = map["map"] %}#}
 
 {#{% set tileset_name = map["tileset_name"] %}#}
 {#{% set tileset_info = pack.get_info(tileset_name) %}#}
-{#{% set sprite_sheet = url_for('get_file', pack_name=pack_name, resource_name=tileset_name, file_name="_sprite_sheet.png") %}#}
+{#{% set sprite_sheet = url_for('get_file', pack_name=pack_name, asset_name=tileset_name, file_name="_sprite_sheet.png") %}#}
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='general.css') }}"/>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='general.css') }}"/>
 
     {% for layer_name in layers.keys() %}
-        <link href="{{ url_for('get_file', pack_name=pack_name, resource_name=layers[layer_name]["name"], file_name="_animation.css") }}"
+        <link href="{{ url_for('get_file', pack_name=pack_name, asset_name=layers[layer_name]["name"], file_name="_animation.css") }}"
               rel="stylesheet">
     {% endfor %}
 </head>
@@ -55,7 +55,7 @@
     </div>
     {% for layer_name, sprite_info in layers.items() %}
         {% set sprite_name = sprite_info["name"] %}
-        {% set sprite_sheet_url = url_for('get_file', pack_name=pack_name, resource_name=sprite_name, file_name="_sprite_sheet.png") %}
+        {% set sprite_sheet_url = url_for('get_file', pack_name=pack_name, asset_name=sprite_name, file_name="_sprite_sheet.png") %}
 
         <b>{{ layer_name }}:</b>&nbsp;&nbsp;&nbsp;&nbsp;<i style="color: #404040">({{ sprite_name }})</i>
         <div style="overflow: scroll">
@@ -76,11 +76,11 @@
             {% for y in range(height) %}
                 {% for x in range(width) %}
 {#                    {% set pos = x + y * width %}#}
-                    {% set idx_ground = map[x, y, "ground"] %}
+{#                    {% set idx_ground = map[x, y, "ground"] %}#}
 {#                    {% set idx_object = map[x, y, "surface"] %}#}
 {#                    {% set idx_object = map[x, y, "wall"] %}#}
-                    {% set idx_map_tile = map[x, y, "env"] %}
-                    {% set idx_map_icon = map[x, y, "building"] %}
+{#                    {% set idx_map_tile = map[x, y, "env"] %}#}
+{#                    {% set idx_map_icon = map[x, y, "building"] %}#}
 {#                    {% set idx_ground_class = "image_"+tileset_info["slug"]+"_frame_"+("%04d" % idx_ground) %}#}
 
                     {%  for layer_name in ["ground", "env", "building"] %}
@@ -90,9 +90,9 @@
                         {% if layer_name == ground or tile_idx != 0 %}
                             <div class='{{ tile_class }}'
                                  style="scale: {{ tile_scale }}; position: absolute; left: {{ x*tile_size + 16 }}px; top: {{ y*tile_size + 16 }}px"
-{#                                 {% if loop.index == 0 %}#}
+                                 {% if loop.index == 0 %}
                                     title="{{ idx_ground }}, {{ idx_object }}, {{ idx_map_tile }}, {{ idx_map_icon }}"
-{#                                 {% endif %}#}
+                                 {% endif %}
                             >
                             </div>
                         {% endif %}
@@ -114,8 +114,8 @@
     List of files in resource
     </div>
     <div style="overflow: auto; height: 200px; background-color:#a0a0a0">
-        {% for file in pack.get_resource_files(resource_name) %}
-          <a href=" {{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name=file) }}">{{ file }}</a><br>
+        {% for file in pack.get_resource_files(asset_name) %}
+          <a href=" {{ url_for('get_file', pack_name=pack_name, asset_name=asset_name, file_name=file) }}">{{ file }}</a><br>
         {% endfor %}
     </div>
 </div>

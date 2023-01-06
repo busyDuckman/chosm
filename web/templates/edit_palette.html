@@ -58,7 +58,7 @@
     </div>
     <div style="overflow: auto; height: 200px; background-color:#a0a0a0">
         {% for file in pack.get_resource_files(resource_name) %}
-          <a href=" {{ url_for('get_file', pack_name=pack_name, resource_name=resource_name, file_name=file) }}">{{ file }}</a><br>
+          <a href=" {{ url_for('get_file', pack_name=pack_name, asset_name=resource_name, file_name=file) }}">{{ file }}</a><br>
         {% endfor %}
     </div>
 </div>

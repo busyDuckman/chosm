@@ -10,7 +10,6 @@
 ## Web Server
 Todo:
   - Get basic game view render
-  - port to FastAPI
   - containerise a web stack (https://hub.docker.com/r/tiangolo/uvicorn-gunicorn-fastapi)
   - create a devops pipeline git -> docker -> droplet
   - stream resource files to browser direct via webserver, not the API  
