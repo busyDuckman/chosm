@@ -42,6 +42,7 @@ def landing():
     <html>
         <body>
             <a href="{{ url_for('editor_view') }}">Editor</a>
+            <a href="{{ url_for('editor_view') }}">World</a>
         </body>
     </html>
     """)
@@ -120,10 +121,7 @@ def list_resources(pack_name: str):
 def list_files(pack_name, file_name):
     path = resource_packs[pack_name].load_resource_as_mam_file(file_name)
     return os.listdir(path)
-    # file = os.path.join('results', path)
-    # if not os.path.isfile(file):
-    #     print("send_result, FILE NOT FOUND: " + file)
-    # return send_from_directory('results', path)
+
 
 
 
