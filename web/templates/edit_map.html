@@ -76,11 +76,11 @@
             {% for y in range(height) %}
                 {% for x in range(width) %}
 {#                    {% set pos = x + y * width %}#}
-{#                    {% set idx_ground = map[x, y, "ground"] %}#}
+                    {% set idx_ground = map[x, y, "ground"] %}
 {#                    {% set idx_object = map[x, y, "surface"] %}#}
 {#                    {% set idx_object = map[x, y, "wall"] %}#}
-{#                    {% set idx_map_tile = map[x, y, "env"] %}#}
-{#                    {% set idx_map_icon = map[x, y, "building"] %}#}
+                    {% set idx_map_tile = map[x, y, "env"] %}
+                    {% set idx_map_icon = map[x, y, "building"] %}
 {#                    {% set idx_ground_class = "image_"+tileset_info["slug"]+"_frame_"+("%04d" % idx_ground) %}#}
 
                     {%  for layer_name in ["ground", "env", "building"] %}
@@ -88,9 +88,12 @@
                         {% set tile_class = "image_"+layers[layer_name]["slug"]+"_frame_"+("%04d" % tile_idx) %}
 
                         {% if layer_name == ground or tile_idx != 0 %}
-                            <div title="{{ idx_ground }}, {{ idx_object }}, {{ idx_map_tile }}, {{ idx_map_icon }}"
-                                 class='{{ tile_class }}'
-                                 style="scale: {{ tile_scale }}; position: absolute; left: {{ x*tile_size + 16 }}px; top: {{ y*tile_size + 16 }}px">
+                            <div class='{{ tile_class }}'
+                                 style="scale: {{ tile_scale }}; position: absolute; left: {{ x*tile_size + 16 }}px; top: {{ y*tile_size + 16 }}px"
+{#                                 {% if loop.index == 0 %}#}
+                                    title="{{ idx_ground }}, {{ idx_object }}, {{ idx_map_tile }}, {{ idx_map_icon }}"
+{#                                 {% endif %}#}
+                            >
                             </div>
                         {% endif %}
                     {%  endfor %}

@@ -5,3 +5,5 @@ imageio
 ffmpeg-python
 imageio-ffmpeg
 boltons
+fastapi
+uvicorn[standard]
