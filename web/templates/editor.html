@@ -4,7 +4,7 @@
 {#    <link rel="stylesheet" type="text/css" href="../static/general.css"/>#}
     <meta charset="UTF-8">
     <title>Resource Pack Editor / Viewer</title>
-    <link href="{{ url_for('static', filename='general.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', path='/general.css') }}" rel="stylesheet">
 
     <style>
         #left_div {
@@ -38,7 +38,7 @@
       <b>Packs</b>
       <div style="overflow: auto; height: 100px; background-color:#a0a0a0">
           {% for pack in packs %}
-            <a href="{{ url_for('editor_view', pack_name=pack, resource_name=None) }}">{{pack}}</a><br>
+            <a href="{{ url_for('editor_view', pack_name=pack) }}">{{pack}}</a><br>
           {% endfor %}
       </div>
 
@@ -52,10 +52,10 @@
       {# TODO: I want this div to fill out the remaining space, but it's not coperating #}
       <div style="overflow: auto; height: 600px; background-color:#a0a0a0; margin-top: 10px; border: 1px solid">
           {% for name, dir in resources | dictsort %}
-                    <a href="{{ url_for('editor_view', pack_name=pack_name, resource_name=name) }}"
+                    <a href="{{ url_for('editor_view', pack_name=pack_name, asset_name=name) }}"
                        class="button_link"
                         style="width: 35%;">
-                    <img src="{{ url_for('get_file', pack_name=pack_name, resource_name=name, file_name="preview.jpg")  }}"
+                    <img src="{{ url_for('get_file', pack_name=pack_name, asset_name=name, file_name="preview.jpg")  }}"
                          style="width: 64px">
                         {{name}}
                     </a>
@@ -68,15 +68,15 @@
 </div>
 
 <div id="right_div" class="desktop">
-  {% if resource_name %}
+  {% if asset_name %}
       {# TODO: remove the  width: 1200px and let this fill the screen.#}
       <div class="window_border" style="width: 1200px">
           <div class="window_title" >
-              {{ pack.get_resource_type(resource_name) }} editor
+              {{ pack.get_resource_type(asset_name) }} editor
           </div>
 
           {# TODO: I want this iframe to fill out the remaining space, but it's not coperating #}
-          <iframe src="{{ url_for('edit_resource', pack_name=pack_name, resource_name=resource_name) }}"
+          <iframe src="{{ url_for('edit_asset_view', pack_name=pack_name, asset_name=asset_name) }}"
                   title="Editor View" scrolling="“no”" frameborder="“0”" width="1200px" height="800px"
           style="float: top">
           </iframe>
@@ -89,28 +89,28 @@
 
 
 
-<script src="https://code.jquery.com/jquery-3.5.1.js"
-          integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc="
-          crossorigin="anonymous"></script>
-
-  <script type="text/javascript">
-    $(document).on('click','#glob-epr-form',function(e)
-                   {
-      console.log('hello');
-      e.preventDefault();
-      $.ajax({
-        type:'POST',
-        url:'{{ url_for("editor_view", pack_name=pack_name, resource_name=resource_name) }}',
-        data:{
-          glob-epr:$("#glob-epr").val()
-        },
-        success:function()
-        {
-          alert('saved');
-        }
-      })
-    });
-  </script>
+{#<script src="https://code.jquery.com/jquery-3.5.1.js"#}
+{#          integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc="#}
+{#          crossorigin="anonymous"></script>#}
+{##}
+{#  <script type="text/javascript">#}
+{#    $(document).on('click','#glob-epr-form',function(e)#}
+{#                   {#}
+{#      console.log('hello');#}
+{#      e.preventDefault();#}
+{#      $.ajax({#}
+{#        type:'POST',#}
+{#        url:'{{ url_for("editor_view", pack_name=pack_name, asset_name=asset_name) }}',#}
+{#        data:{#}
+{#          glob-epr:$("#glob-epr").val()#}
+{#        },#}
+{#        success:function()#}
+{#        {#}
+{#          alert('saved');#}
+{#        }#}
+{#      })#}
+{#    });#}
+{#  </script>#}
 
 
 </body>
