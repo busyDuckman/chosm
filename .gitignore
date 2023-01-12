@@ -5,6 +5,7 @@ game_files/**/*.cc
 game_files/**/*.cur
 game_files/baked/
 game_files/server_files/
+scratch-pad/supertokens-test/node_modules/
 tiled_projects/
 .idea/
 env/
