@@ -1,0 +1,8 @@
+{
+  "id": 123,
+  "name": "test",
+  "type": "text_database",
+  "slug": "text-database-test",
+  "created": "2023-01-08T23:14:57+11:00",
+  "num_tokens": 2
+}

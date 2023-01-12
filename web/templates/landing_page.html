@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>Chosm</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='gui/parchment.css') }}"/>
+    <style>
+       @import url('https://fonts.googleapis.com/css?family=Pirata+One|Bilbo+Swash+Caps&display=swap');
+       {#@import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');#}
+       @import url('https://fonts.googleapis.com/css2?family=Goblin+One&display=swap');
+       @import url('https://fonts.googleapis.com/css2?family=Lato&display=swap');
+
+       html {
+          {#background: url({{ url_for('static', path='gui/chosm_intro.jpg') }}) no-repeat center center fixed;#}
+           background: url({{ url_for('static', path='gui/chosm_blank_tiny.webp') }}) no-repeat center center fixed;
+           animation: backgroundScroll 40s linear infinite;
+          -webkit-background-size: cover;
+          -moz-background-size: cover;
+          -o-background-size: cover;
+          background-size: cover;
+        }
+
+        @keyframes backgroundScroll {
+            0%   {background-position: 0 0;}
+            50%  {background-position: -850px 0;}
+            100% {background-position: 0 0;}
+        }
+
+
+       {% set p_width = 380 %}
+       {% set p_height = 580 %}
+       .centered_menu {
+           position: absolute;
+           top: 50%;
+           left: 50%;
+           margin-top: {{ -p_height//2 }}px;
+           margin-left: {{ -p_width//2 }}px;
+           width: {{ p_width }}px;
+           height: {{ p_height }}px;
+           border-radius: 10px;
+           {#display: inline-block;#}
+           {#overflow:auto;#}
+           {#border: solid 10px red;#}
+
+           padding: 0px;
+
+           border: solid 1px;
+           box-shadow:
+              1.6px 1.6px 1.7px rgba(0, 0, 0, 0.08),
+              4.4px 4.4px 4.8px rgba(0, 0, 0, 0.115),
+              10.6px 10.6px 11.5px rgba(0, 0, 0, 0.15),
+              35px 35px 38px rgba(0, 0, 0, 0.23);
+       }
+
+       .parchment {
+           {#background-image: url("{{ url_for('static', path='gui/parchment_large_0001.webp') }}") ;#}
+           background-image: url("{{ url_for('static', path='gui/parchment_to_edge_0001.webp') }}") ;
+           background-repeat:no-repeat;
+           {#background-size: {{ p_width }}px {{ p_height -50}}px;#}
+           background-size: {{ p_width }}px {{ p_height }}px;
+           padding: 20px;
+           padding-left: 100px;
+           padding-top: 40px;
+           {#margin: 0px;#}
+           border-radius: 10px;
+           height: {{ p_height }}px;
+           {#overflow:auto;#}
+
+
+           {#font-family: "Bilbo Swash Caps", cursive;#}
+           {#box-shadow: 20px 20px #303030;#}
+
+       }
+
+       {% set t_width = 600 %}
+       {% set t_height = 150 %}
+       .title{
+           position: absolute;
+           {#font-family: "Bilbo Swash Caps";#}
+           {#font-family: 'MedievalSharp', cursive;#}
+           font-family: "Luminari";
+           {#font-family: 'Lato', sans-serif;#}
+           {#font-family: 'Goblin One', cursive;#}
+           font-size: 80px;
+           text-align: center;
+           {#top: 10px;#}
+           left: 50%;
+           {#margin-top: {{ -t_height//2 }}px;#}
+           margin-left: {{ -t_width//2 }}px;
+           width: {{ t_width }}px;
+           height: {{ t_height }}px;
+           {#color: #00000010;#}
+           {#text-shadow: 2px 2px #505050, 2px 2px 10px #400000f0;#}
+
+            {#color: #FFFFFF;#}
+            {#background: #232323;#}
+            {#text-shadow: 0 0 5px #FFF, 0 0 10px #FFF, 0 0 15px #FFF, 0 0 20px #1018ff, 0 0 30px #1018ff, 0 0 40px #1018ff, 0 0 55px #1018ff, 0 0 75px #1018ff;#}
+            {#text-shadow: 0 0 2px #FFF, 0 0 5px #FFF, 0 0 10px #FFF,#}
+            {#0 0 15px #1018ff40, 0 0 20px #1018ff40, 0 0 350px #1018ff40, 0 0 30px #1018ff40, 0 0 35px #1018ff40;#}
+
+           text-shadow: 0 0 5px #FFF, 0 0 10px #FFF, 0 0 15px #1018ff40, 0 0 20px #1018ff40;
+
+           animation: stormy 1s linear infinite;
+           {#animation: gloomy 2s linear infinite;#}
+       }
+
+       @keyframes gloomy {
+           0%    {text-shadow: 0 0 5px #FFF, 0 0 10px #FFF, 0 0 15px #1018ff40, 0 0 20px #1018ff40;}
+            50%  {text-shadow: 0 0 10px #FFF, 0 0 20px #FFF, 0 0 14px #1018ff40, 0 0 50px #1018ff40;}
+            100% {text-shadow: 0 0 5px #FFF, 0 0 10px #FFF, 0 0 15px #1018ff40, 0 0 20px #1018ff40;}
+       }
+       @keyframes stormy {
+            0%   {color: #000;}
+            50%  {color: #404040;}
+            100% {color: #000;}
+        }
+       @keyframes glowing {
+            0%   {color: #4040b0;}
+            50%  {color: #101060;}
+            100% {color: #4040b0;}
+        }
+
+
+
+
+       .large_font {
+           font-family: "Luminari";
+           font-size: 30px;
+
+       }
+
+       .small_font {
+           font-family: "Luminari";
+           font-size: 15px;
+           color: #300000;
+       }
+
+       p::first-letter {
+          color: #7F3300;
+          float: left;
+          font: 1.7em/1em Morris;
+          text-shadow: 1px 1px 1px #EAC200;
+          {#margin: 0 .5rem;#}
+        }
+
+       p:hover::first-letter {
+          color: #7F3300;
+          float: left;
+          font: 1.7em/1em Morris;
+          text-shadow: 1px 1px 1px gold;
+          {#margin: 0 .5rem;#}
+        }
+
+       p:hover {
+           color: #803030f0;
+           cursor: pointer;
+       }
+
+       p {
+           color: #000000a0;
+           cursor: pointer;
+       }
+
+
+
+       a:visited{
+           color:#404040;
+        }
+
+       .acknoledement {
+           position: absolute;
+            bottom: 0;
+           width: 98%;
+           color: #404040;
+           text-align: right;
+       }
+    </style>
+</head>
+<body>
+
+<span style="color: #404040">ver: {{ version }}</span><br>
+<a href="https://github.com/busyDuckman/chosm" target=”_blank” style="color: #404040;"> github</a>
+
+<div class="title">
+    CHOSM
+</div>
+
+<div class="centered_menu">
+    <div class="parchment">
+        <p class="large_font">New Game
+    {#        <span class="small_font">Begin your journey.</span>#}
+        </p>
+        <p class="large_font">
+            Continue
+        </p>
+        <p class="large_font">
+            Login
+        </p>
+        <p class="large_font">
+            Register
+        </p>
+        <p class="large_font" onclick=gotoPage("{{ url_for('editor_view') }}")>
+            Editor
+        </p>
+        <p class="large_font">
+            Community
+        </p>
+
+        <span class="small_font">Logged in as Sir Duckmanath.</span>
+    </div>
+</div>
+
+<div class="acknoledement">
+    We acknowledge the Ngunnawal people as the traditional custodians of the land on which this game was made.
+</div>
+
+
+<script>
+function gotoPage(where) {
+    window.location.href = where
+  {#document.getElementById("demo").innerHTML = "Hello World";#}
+}
+</script>
+</body>
+</html>

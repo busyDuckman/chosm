@@ -73,6 +73,10 @@ class ResourcePack:
             names_and_dirs = {n: d for n, d in zip(names, dirs)}
         return names_and_dirs
 
+    def list_assets_of_type(self, type_name):
+        get_info
+        return self.list_assets(type_name + "-*")
+
     def get_asset_path(self, asset_name):
         if asset_name not in self.asset_lut:
             logging.warning(f"Key not found: pack={self.name}, asset_name={asset_name}")
@@ -82,7 +86,7 @@ class ResourcePack:
         path = self.asset_lut[asset_name]
         return path
 
-    def get_resource_type(self, resource_name):
+    def get_resources_type(self, resource_name):
         path = self.get_asset_path(resource_name)
         type_name = os.path.split(path)[1].split("-")[0].strip().lower()
         return type_name
@@ -143,5 +147,6 @@ class ResourcePack:
         d = self.load_json_file_from_resource(resource_name, "map.json")
         the_map = load_map_from_dict(d)
         return the_map
+
 
 

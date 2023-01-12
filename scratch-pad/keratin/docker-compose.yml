@@ -1,0 +1,32 @@
+version: '2'
+services:
+  db:
+    image: mysql:5.7
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+
+  redis:
+    image: redis
+
+  authn:
+    image: keratin/authn-server:1.0.0
+    ports:
+      - "8765:3000"
+    environment:
+      - DATABASE_URL=mysql://root@db:3306/authn
+      - REDIS_URL=redis://redis:6379/0
+      - AUTHN_URL=http://authn:3000
+      - APP_DOMAINS=localhost
+      - SECRET_KEY_BASE
+    depends_on:
+      - redis
+      - db
+
+#  app:
+#    # ...
+#    depends_on:
+#      - authn

@@ -28,7 +28,7 @@ def organise_maps(joined_maps: List[MAMMapAsset]):
     return organised
 
 
-def to_single_map(sorted_maps: List[MAMMapAsset], width_super_map, height_super_map) -> MAMMapAsset:
+def to_single_map(new_map_identifier, sorted_maps: List[MAMMapAsset], width_super_map, height_super_map) -> MAMMapAsset:
     sub_map_width, sub_map_height = sorted_maps[0].game_map.size()
     if not all(m.game_map.size() == (sub_map_width, sub_map_height) for m in sorted_maps):
         raise MAMFileParseError(None, "attempt to merge maps of different size")
@@ -41,7 +41,7 @@ def to_single_map(sorted_maps: List[MAMMapAsset], width_super_map, height_super_
     # TODO: Does this shortcut (assuming all maps have the ame attributes) matter?
     merged_map = copy.copy(sorted_maps[0])
     gm = merged_map.game_map
-    merged_map.game_map = Map(width_super_map * sub_map_width, height_super_map * sub_map_height,
+    merged_map.game_map = Map(new_map_identifier, width_super_map * sub_map_width, height_super_map * sub_map_height,
                               gm.num_layers, gm._layer_names)
 
     for sub_map in sorted_maps:
@@ -63,9 +63,9 @@ def combine_map_assets(map_assets: List[MAMMapAsset],
                        platform: Platform) -> List[MapAsset]:
     organised = organise_maps(map_assets)
     single_maps = []
-    for sorted_maps, width, height in organised:
+    for i, (sorted_maps, width, height) in enumerate(organised):
         print("combining map map:", width, height)
-        single_map = to_single_map(sorted_maps, width, height)
+        single_map = to_single_map(i, sorted_maps, width, height)
         single_maps.append(single_map)
 
     return single_maps

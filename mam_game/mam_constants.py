@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import List
+from typing import List, Tuple
 
 import slugify
 
@@ -69,3 +69,20 @@ class Direction(Enum):
     EAST  = 1
     SOUTH = 2
     WEST  = 3
+
+    def other_way(self):
+        return Direction((self.value+2) % 4)
+
+    def right(self):
+        return Direction((self.value+1) % 4)
+
+    def left(self):
+        return Direction((self.value-1) % 4)
+
+    def as_vec(self):
+        return [(0, 1), (1, 0), (0, -1), (-1, 0)][self.value]
+
+    def apply(self, x: int, y: int) -> Tuple[int, int]:
+        vec = self.as_vec()
+        return x+vec[0], y+vec[1]
+
