@@ -175,7 +175,7 @@ class DifferenceTable(ABC, collections.abc.Sequence):
 
 
 class InstanceTable(DifferenceTable):
-    def __init__(self, reference_table: List[Dict[str, Any]], lru_cache_size: int = 1_000):
+    def __init__(self, reference_table: Union[List[Dict[str, Any]], DifferenceTable], lru_cache_size: int = 1_000):
         # TODO: internalise with a list of lists, not a list of dicts.
         #       but do so in a way that does not destroy: InstanceTable(ArchetypedTable(map.tiles))
         #       see stub for ICantBelieveItsNotAListOfDicts
@@ -266,7 +266,6 @@ def main():
     # recompress
     tbl = ArchetypedTable(tbl, lru_cache_size=tbl.lru_cache_size)
     print(tbl.get_difference_table())
-    exit()
 
     import numpy as np
 
@@ -289,6 +288,13 @@ def main():
     print(ppl_inst_array[3])
     ppl_inst_array[3, "age"] = 27
     print(ppl_inst_array[3])
+    print(ppl_inst_array.get_difference_table())
+
+    print("Testing instance table from ArchetypedTable")
+    ppl_inst_array = InstanceTable(ppl_arch_array)
+    print(ppl_inst_array[2])
+    ppl_inst_array[2, "age"] = 41
+    print(ppl_inst_array[2])
     print(ppl_inst_array.get_difference_table())
 
     print()

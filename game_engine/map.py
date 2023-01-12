@@ -6,7 +6,9 @@ from typing import Dict, Tuple, List
 
 import numpy as np
 
-from helpers.archetyped_table import ArchetypedTable
+from game_engine.why import Why
+from helpers.archetyped_table import ArchetypedTable, InstanceTable, DifferenceTable
+from mam_game.mam_constants import Direction
 
 
 #
@@ -43,10 +45,11 @@ from helpers.archetyped_table import ArchetypedTable
 
 class Map:
     # a grid based map
-    def __init__(self, w, h, num_layers, layer_names=None):
+    def __init__(self, map_identifier, w, h, num_layers, layer_names=None):
         if num_layers <= 0:
             raise ValueError("numer of layers must be > 0")
 
+        self.map_identifier = map_identifier
         self.num_layers = num_layers
         self.width: int = w
         self.height: int = h
@@ -62,7 +65,7 @@ class Map:
             ln = copy.copy(layer_names)  # TODO: do I want to normalise they layer names?
             self.layer_names = tuple(ln)
 
-        self._map = ArchetypedTable({n: 0 for n in layer_names}, self.width * self.height)
+        self._map: DifferenceTable = ArchetypedTable({n: 0 for n in layer_names}, self.width * self.height)
 
     def recompress_map(self):
         self._map = ArchetypedTable(self._map, lru_cache_size=self._map.lru_cache_size)
@@ -108,7 +111,8 @@ class Map:
         return self.width * self.height
 
     def asdict(self):
-        d = {"width": self.width,
+        d = {"map_identifier": self.map_identifier,
+             "width": self.width,
              "height": self.height,
              "num_layers": self.num_layers,
              "layer_names": self.layer_names,
@@ -117,14 +121,34 @@ class Map:
         return d
 
 
+class MapInstance(Map):
+    def __init__(self, base_map: Map):
+        super.__init__(base_map.width, base_map.height, base_map.num_layers, layer_names=base_map.layer_names)
+        # To save ram, this table only stores the differences of this instance vs. the reference map.
+        # If a lock is picked, or chest looted, the changes won't affect the master copy.
+        self._map = InstanceTable(base_map._map)
+
+    def can_move_to(self, x: int, y: int, direction: Direction) -> Why:
+        # TODO
+        return Why.true()
+
+    def get_spawn_info(self):
+        # TODO
+        return self.width // 2, self.height // 2, Direction.NORTH
+
+
+
+
+
 def load_map_from_dict(d) -> Map:
     # note "map.json" is Map.asdict() with an extra "layer_sprites" key entered for sprite location.
+    map_id = d["map_identifier"]
     w = d["width"]
     h = d["height"]
     num_layers = d["num_layers"]
     layer_names = d["layer_names"]
     map_tiles = d["map"]
-    the_map = Map(w, h, num_layers, layer_names)
+    the_map = Map(map_id, w, h, num_layers, layer_names)
     for x, y in itertools.product(range(w), range(h)):
         the_map[x, y] = map_tiles[(y * w) + x]
     return the_map

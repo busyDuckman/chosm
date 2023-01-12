@@ -7,3 +7,20 @@ imageio-ffmpeg
 boltons
 fastapi
 uvicorn[standard]
+python-multipart
+orjson
+# fastapi-users[sqlalchemy]
+# aiosqlite
+fastapi-login
+pydantic[dotenv, email]
+sqlalchemy
+# python-i18n[YAML]
+translators
+toml
+bcrypt
+# fastapi_keycloak
+
+python-dotenv==0.19.2
+supertokens-python
+
+auth0-python

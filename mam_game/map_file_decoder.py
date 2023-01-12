@@ -1,4 +1,5 @@
 import io
+import logging
 from dataclasses import dataclass, asdict
 from typing import List, Dict
 
@@ -162,6 +163,8 @@ def load_map_file(maze_dat: RawFile,
                   map_width = 16,
                   map_height = 16
                   ) -> MapAsset:
+    # From the wiki: take the map_id from the filename, not the value in the file
+    map_id = int("".join([c for c in maze_dat.file_name if c.isdigit()]))
     total_tiles = map_width * map_height
 
     mm5_surface_lut, mm4_surface_lut, env_lut = get_luts()
@@ -186,7 +189,7 @@ def load_map_file(maze_dat: RawFile,
         wall_type_lut, surface_type_lut, default_floor_type = read_map_meta_data(f)
 
     layers = list(MaMTile.__annotations__.keys())
-    the_map = Map(map_width, map_height, len(layers), layers)
+    the_map = Map(map_id, map_width, map_height, len(layers), layers)
 
     # create the map
     for y in range(map_height):
@@ -221,8 +224,9 @@ def load_map_file(maze_dat: RawFile,
                 building = map_overlay + 16
 
             if map_top != 0 and map_overlay != 0:
-                print("arrrg")
-                exit(0)
+                logging.error("TODO: work out the map overlay stuff.")
+                # print("arrrg")
+                # exit(0)
             #              h  gnd   surface, w, env,    building
             tile = MaMTile(0, base, map_top, 0, middle, building,
                            has_grate, no_rest, has_drain, has_event, has_object)
@@ -237,8 +241,6 @@ def load_map_file(maze_dat: RawFile,
 
     layers = {k: next(t for t in tile_sets if t.name == f) for k, f in layers.items()}
 
-    # From the wiki: take the map_id from the filename, not the value in the file
-    map_id = int("".join([c for c in maze_dat.file_name if c.isdigit()]))
     # tile_set = [t for t in tile_sets if t.name == tileset_name][0]
     map_file = MAMMapAsset(map_id, f"map_{map_id:04d}", the_map, layers,
                         joining_map_ids, restricted_spells,

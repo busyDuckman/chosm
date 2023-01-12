@@ -1,0 +1,33 @@
+
+
+@font-face {
+    font-family: 'Morris';
+    src: url('morris_initials.ttf');
+}
+
+@font-face {
+   font-family: "Luminari";
+   src: url('Luminari-Regular.ttf');
+}
+
+
+/*.parchment{*/
+/*   background-image: url("{{ url_for('static', path='gui/parchment_large_0001.webp') }}") ;*/
+/*   background-repeat:no-repeat;*/
+/*   background-size: {{ p_width }}px {{ p_height }}px;*/
+/*   padding: 80px;*/
+/*   position: absolute;*/
+/*   top: 50%;*/
+/*    left: 50%;*/
+/*    margin-top: {{ -p_height//2 }}px;*/
+/*    margin-left: {{ -p_width//2 }}px;*/
+/*    width: {{ p_width }}px;*/
+/*    height: {{ p_height }}px;*/
+
+/*   {#font-family: "Bilbo Swash Caps", cursive;#}*/
+/*   font-family: "Luminari";*/
+/*   {#font-family: "Luminari"#}*/
+/*   {#font: 'Bilbo Swash Caps', cursive;#}*/
+/*   font-size: 50px;*/
+/*   box-shadow: #303030;*/
+/*}*/

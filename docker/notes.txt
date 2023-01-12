@@ -4,3 +4,6 @@
     sudo apt-get install python3.10-distutils
     python3.10 -m pip install --upgrade pip
     sudo apt-get install python3.10-dev
+
+    # required for the translator  (TODO: maybe not with the latest version)
+    # sudo yum -y install nodejs

@@ -31,7 +31,7 @@ class PalAsset(Asset):
         return img.resize((preview_size, preview_size), Image.NEAREST)
 
     def bake(self, file_path):
-        with open(os.path.join(file_path, "pal.json"), 'w') as f:
+        with open(os.path.join(file_path, "pal.json"), 'wt') as f:
             json.dump(self.colors_rgb, f, indent=2)
 
         # with open(os.path.join(file_path, "html_cols.pal"), 'wt') as f:

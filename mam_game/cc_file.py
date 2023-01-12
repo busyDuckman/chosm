@@ -21,6 +21,8 @@ import helpers.stream_helpers as sh
 from chosm.asset import Asset
 from chosm.map_asset import MapAsset
 from chosm.sprite_asset import SpriteAsset
+from chosm.world_asset import WorldAsset
+from game_engine.world import World
 from mam_game.binary_file import load_bin_file
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, normalise_file_name
 from mam_game.mam_map_organiser import combine_map_assets
@@ -430,31 +432,36 @@ class CCFile:
         def_pal = get_default_pal(self.mam_version, self.mam_platform)
         self._resources.append(def_pal)
 
-        # get the monster configs
-        print(f"  - loading monster stats: ", end="")
-        for f_name in ["dark.mon", "xeen.mon"]:
-            if f_name in self._toc_file_names:
-                print(f"{f_name}, ", end="")
-                mon_file = load_monster_database_file(self._raw_data_lut[f_name], self.mam_version, self.mam_platform)
-                self._resources.append(mon_file)
-        print("  - done.")
+        self._bootstrap_monsters()
+        self._bootstrap_maps()
 
-        # load the base monster animations
-        mons = fnmatch.filter(self._toc_file_names, "*.mon")
-        mons = [n for n in mons if n[0].isdigit()]  # ie: NOT "dark.mon", "xeen.mon", etc
-        print(f"  - loading {len(mons)} monsters: ", end='')
-        for f_name in mons:
+        # graphics for the 3d view
+        sprites = fnmatch.filter(self._toc_file_names, "*.sky")
+        sprites += fnmatch.filter(self._toc_file_names, "*.gnd")
+        sprites += fnmatch.filter(self._toc_file_names, "*.fwl")
+        sprites += fnmatch.filter(self._toc_file_names, "*.swl")
+        print(f"  - loading {len(sprites)} 3d view sprites: ", end='')
+        for f_name in sprites:
             print(".", end='')
             pal = self.get_pal_for_file(f_name)
             raw = self._raw_data_lut[f_name]
             sprite = load_sprite_file(raw, pal, self.mam_version, self.mam_platform)
             self._resources.append(sprite)
-
-            raw_att = self._raw_data_lut[f_name.replace(".mon", ".att")]
-            sprite2 = load_sprite_file(raw_att, pal, self.mam_version, self.mam_platform)
-            self._resources.append(sprite2)
         print()
 
+        self._bootstrap_worlds()
+
+    def _bootstrap_worlds(self):
+        maps: List[MapAsset] = self.get_resources(MapAsset)
+        outdoor = next(m for m in maps if m.file_id == 1)
+        name = {MAMVersion.DARKSIDE: "Darkside of Xeen",
+                MAMVersion.CLOUDS: "Clouds of Xeen",
+                MAMVersion.MM3: "Isles of Terra"}[self.mam_version]
+        world = World(name, [outdoor.game_map], [])
+        world_asset = WorldAsset(1, "main_world", world)
+        self._resources.append(world_asset)
+
+    def _bootstrap_maps(self):
         print(f"  - loading hud/misc graphics: ")
         glob_list = ["*.til"]
         image_names = [fnmatch.filter(self._toc_file_names, e) for e in glob_list]
@@ -465,8 +472,8 @@ class CCFile:
             raw = self._raw_data_lut[f_name]
             sprite = load_sprite_file(raw, pal, self.mam_version, self.mam_platform)
             if "outdoor" not in f_name:
-                tile_set, tile_border = sprite.split(sprite.num_frames()-1,
-                                                     left_name=sprite.name, right_name=sprite.name+"_border",
+                tile_set, tile_border = sprite.split(sprite.num_frames() - 1,
+                                                     left_name=sprite.name, right_name=sprite.name + "_border",
                                                      left_id=sprite.file_id)
                 tile_set = tile_set.crop(0, 0, 10, 8, new_name=tile_set.name)  # trim out the icons
                 self._resources.append(tile_set)
@@ -511,6 +518,31 @@ class CCFile:
         self._resources.extend(combine_map_assets(map_assets, self.mam_version, self.mam_platform))
         print()
 
+    def _bootstrap_monsters(self):
+        # get the monster configs
+        print(f"  - loading monster stats: ", end="")
+        for f_name in ["dark.mon", "xeen.mon"]:
+            if f_name in self._toc_file_names:
+                print(f"{f_name}, ", end="")
+                mon_file = load_monster_database_file(self._raw_data_lut[f_name], self.mam_version, self.mam_platform)
+                self._resources.append(mon_file)
+        print("  - done.")
+
+        # load the base monster animations
+        mons = fnmatch.filter(self._toc_file_names, "*.mon")
+        mons = [n for n in mons if n[0].isdigit()]  # ie: NOT "dark.mon", "xeen.mon", etc
+        print(f"  - loading {len(mons)} monsters: ", end='')
+        for f_name in mons:
+            print(".", end='')
+            pal = self.get_pal_for_file(f_name)
+            raw = self._raw_data_lut[f_name]
+            sprite = load_sprite_file(raw, pal, self.mam_version, self.mam_platform)
+            self._resources.append(sprite)
+
+            raw_att = self._raw_data_lut[f_name.replace(".mon", ".att")]
+            sprite2 = load_sprite_file(raw_att, pal, self.mam_version, self.mam_platform)
+            self._resources.append(sprite2)
+        print()
 
     def bake(self, bake_dir=None):
         """
@@ -556,6 +588,8 @@ class CCFile:
         print()
 
         return bake_path
+
+
 
 
 def parse_toc_csv(file_path) -> List[Tuple[str, int, str]]:
