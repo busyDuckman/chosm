@@ -1,0 +1,10 @@
+<div class="sub_window_border">
+    <div class="window_title">
+    List of files in resource
+    </div>
+    <div style="overflow: auto; height: 200px; background-color:#a0a0a0">
+        {% for file in pack[asset_slug].get_file_names() %}
+          <a href=" {{ url_for('get_file', pack_name=pack_name, asset_slug=asset_slug, file_name=file) }}">{{ file }}</a><br>
+        {% endfor %}
+    </div>
+</div>

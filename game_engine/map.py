@@ -49,14 +49,10 @@ class Map:
         if num_layers <= 0:
             raise ValueError("numer of layers must be > 0")
 
-        self.map_identifier = map_identifier
+        self.map_identifier = str(map_identifier)
         self.num_layers = num_layers
         self.width: int = w
         self.height: int = h
-        # self._map: List[Tile] = [Tile(0, 0, 0, 0, 0) for _ in range(self.width * self.height)]
-        # self.num_layers: int = num_layers
-        # self._layer_names: List[str]
-        # self._layer_lut: Dict[str, int] = {}
         if layer_names is None:
             self.layer_names = tuple([f"layer_{i:02d}" for i in range(num_layers)])
         else:

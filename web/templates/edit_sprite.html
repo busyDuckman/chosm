@@ -3,7 +3,7 @@
 <head>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='/general.css') }}"/>
     <meta charset="UTF-8">
-    <link href="{{ url_for('get_file', pack_name=pack_name, asset_name=asset_name, file_name="_animation.css") }}"
+    <link href="{{ url_for('get_file', pack_name=pack_name, asset_slug=asset_slug, file_name="_animation.css") }}"
      rel="stylesheet">
 </head>
 
@@ -12,26 +12,26 @@
 
     <div class="sub_window_border">
         <div class="window_title">
-        Sprite Sheet ({{ info["num_frames"] }} frames)
+        Sprite Sheet ({{ asset_rec["num_frames"] }} frames)
         </div>
 
         <div style="overflow: scroll">
-            <img src="{{ url_for('get_file', pack_name=pack_name, asset_name=asset_name, file_name="_sprite_sheet.png")  }}">
+            <img src="{{ url_for('get_file', pack_name=pack_name, asset_slug=asset_slug, file_name="_sprite_sheet.png")  }}">
         </div>
     </div>
 </div>
 
 <br>
-{% for anim_info in info["animations"] %}
+{% for anim_info in asset_rec["animations"] %}
     <div class="sub_window_border">
         <div class="window_title">
         Animation "{{ anim_info["slug"] }}" ({{ anim_info["frame_idx_list"]|length }} frames)
         </div>
-        <div style="width: {{ 600 }}px; height: {{ info["height"] + 20 }}px;
+        <div style="width: {{ 600 }}px; height: {{ asset_rec["height"] + 20 }}px;
              background-color: fuchsia;
              background-image: linear-gradient(fuchsia, #900090);">
-            <div class='anim_{{ info["slug"] }}_{{ anim_info["slug"] }}'
-                 style="width: {{ info["width"] + 10 }}px; height: {{ info["height"] + 10 }}px">
+            <div class='anim_{{ asset_rec["slug"] }}_{{ anim_info["slug"] }}'
+                 style="width: {{ asset_rec["width"] + 10 }}px; height: {{ asset_rec["height"] + 10 }}px">
             </div>
         </div>
         <table style="">
@@ -54,8 +54,8 @@
     List of files in resource
     </div>
     <div style="overflow: auto; height: 200px; background-color:#a0a0a0">
-        {% for file in pack.get_resource_files(asset_name) %}
-          <a href=" {{ url_for('get_file', pack_name=pack_name, asset_name=asset_name, file_name=file) }}">{{ file }}</a><br>
+        {% for file in pack[asset_slug].get_file_names() %}
+          <a href=" {{ url_for('get_file', pack_name=pack_name, asset_slug=asset_slug, file_name=file) }}">{{ file }}</a><br>
         {% endfor %}
     </div>
 </div>

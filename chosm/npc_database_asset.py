@@ -3,6 +3,7 @@ from typing import List
 from PIL import Image
 
 from chosm.asset import Asset
+from chosm.game_constants import AssetTypes
 from game_engine.game_engine import NPCType
 from helpers import pil_image_helpers as pih
 
@@ -15,8 +16,8 @@ class NPCDatabaseAsset(Asset):
     def __str__(self):
         return f"Binary File: id={self.file_id} len={len(self.data)}"
 
-    def get_type_name(self):
-        return "mondb"
+    def get_type(self) -> AssetTypes:
+        return AssetTypes.NPC_DATABASE
 
     def _get_bake_dict(self):
         info = super()._get_bake_dict()

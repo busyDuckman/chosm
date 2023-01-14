@@ -5,6 +5,7 @@ from typing import List
 from PIL import Image
 
 from chosm.asset import Asset
+from chosm.game_constants import AssetTypes
 from helpers.color import Color
 from mam_game.mam_constants import MAMFileParseError
 
@@ -20,8 +21,8 @@ class PalAsset(Asset):
     def __str__(self):
         return f"Palette File: id={self.file_id} num_cols={len(self.colors)}"
 
-    def get_type_name(self):
-        return "palette"
+    def get_type(self) -> AssetTypes:
+        return AssetTypes.PALETTE
 
     def _gen_preview_image(self, preview_size) -> Image.Image:
         img = Image.new("RGB", size=(16, 16))
@@ -49,5 +50,5 @@ def pal_from_baked_folder(folder: str):
 
     file_id = int(info["id"])
     name = int(info["name"])
-    t = int(info["type"])
+    # t = int(info["type_name"])
     return PalAsset(file_id, name, pal)

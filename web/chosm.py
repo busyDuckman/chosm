@@ -7,12 +7,15 @@ from fastapi.responses import FileResponse, HTMLResponse, ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from chosm.game_constants import AssetTypes
 from chosm.resource_pack import ResourcePack
 from game_engine.game_state import GameState
 from game_engine.session import Session
 from game_engine.world import World
 
 from web.route_user import user_router
+
+logging.basicConfig(level=logging.WARNING)
 
 # fastAPI data
 app = FastAPI()
@@ -41,9 +44,10 @@ async def startup_event():
         resource_packs[rp.name] = rp
 
     # create an initial session
-    mam5_resources: ResourcePack = list(resource_packs.values())[0]
-    mam5_world = mam5_resources.list_assets_of_type("world")
-    print(mam5_world)
+    # print(resource_packs)
+    mam5_pack: ResourcePack = resource_packs['dark-cccur-darkside-pc-dos']
+    mam5_world = mam5_pack.load_world("main_world")
+
     debug_session: Session = Session("test_user", GameState(mam5_world))
     sessions["debug_session"] = debug_session
 
@@ -82,21 +86,29 @@ async def manage_asset_files(pack_name, asset_name):
     return ORJSONResponse(files)
 
 
-@app.get("/download/resource-packs/{pack_name}/{asset_name}/{file_name}")
-async def get_file(pack_name, asset_name, file_name):
+@app.get("/download/resource-packs/{pack_name}/by_slug/{asset_slug}/{file_name}")
+async def get_file(pack_name, asset_slug, file_name):
     global resource_folder, resource_packs
-
     pack = resource_packs[pack_name]
-    file_path = pack.get_resource_files(asset_name, file_name, full_path=True)[0]
+    file_path = pack[asset_slug].get_file_path(file_name)
     return FileResponse(path=file_path)
 
 
+@app.get("/download/resource-packs/{pack_name}/by_type/{asset_type}/by_name/{asset_name}/{file_name}")
+async def get_file(pack_name, asset_type, asset_name, file_name):
+    global resource_folder, resource_packs
+    pack = resource_packs[pack_name]
+    file_path = pack[asset_type, asset_name].get_file_path(file_name)
+    return FileResponse(path=file_path)
+
+
+
 # ----------------------------------------------------------------------------------------------------------------------
-@app.post("/editor/main/{pack_name}/{asset_name}")
+@app.post("/editor/main/{pack_name}/{asset_slug}")
 @app.get("/editor/main/")
 @app.get("/editor/main/{pack_name}")
-@app.get("/editor/main/{pack_name}/{asset_name}")
-async def editor_view(request: Request, pack_name=None, asset_name=None):
+@app.get("/editor/main/{pack_name}/{asset_slug}")
+async def editor_view(request: Request, pack_name=None, asset_slug=None, sort_on="name"):
     glob_exp = None
     # glob_exp = session.get("glob_exp", None)
     if request.method == "POST":
@@ -113,29 +125,33 @@ async def editor_view(request: Request, pack_name=None, asset_name=None):
     resources = {}
     if pack_name is not None:
         pack = resource_packs[pack_name]
-        resources = pack.list_assets(glob_exp)
+        resources = pack.get_assets(glob_exp)
+
+    if sort_on == "name":
+        # ugly little oneliner: works because dict preserves insertion order
+        resources = dict(sorted(resources.items(), key=lambda x: x[1].name))
 
     context = dict(packs=packs, pack=pack, pack_name=pack_name,
                    glob_exp=glob_exp,
-                   resources=resources, asset_name=asset_name,
+                   resources=resources, asset_slug=asset_slug,
                    request=request)
 
     return templates.TemplateResponse("editor.html", context)
 
 
-@app.get("/editor/asset/{pack_name}/{asset_name}")
-async def edit_asset_view(request: Request, pack_name, asset_name):
+@app.get("/editor/asset/{pack_name}/{asset_slug}")
+async def edit_asset_view(request: Request, pack_name, asset_slug):
     print("edit_asset_view")
     pack = resource_packs[pack_name]
-    r_type_token = pack.get_resources_type(asset_name)
-    path = pack.get_asset_path(asset_name)
-    info = pack.get_info(asset_name)
+    asset_rec = pack[asset_slug]
 
     context = dict(request=request,
-                   pack=pack, pack_name=pack_name,
-                   asset_name=asset_name, info=info)
+                   pack=pack,
+                   pack_name=pack_name,
+                   asset_rec=asset_rec,
+                   asset_slug=asset_rec.slug)
 
-    return templates.TemplateResponse(f'edit_{r_type_token}.html', context)
+    return templates.TemplateResponse(f'edit_{asset_rec.asset_type_as_string}.html', context)
 
 
 # ----------------------------------------------------------------------------------------------------------------------

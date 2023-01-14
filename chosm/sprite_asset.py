@@ -12,6 +12,7 @@ import slugify
 from PIL import Image
 import helpers.pil_image_helpers as pih
 from chosm.asset import Asset
+from chosm.game_constants import AssetTypes
 
 
 @dataclass
@@ -65,8 +66,8 @@ class SpriteAsset(Asset):
     def __str__(self):
         return f"sprite_file File: id={self.file_id} num_cols={len(self.colors)}"
 
-    def get_type_name(self):
-        return "sprite"
+    def get_type(self) -> AssetTypes:
+        return AssetTypes.SPRITE
 
     def num_frames(self) -> int:
         return len(self.frames)
@@ -247,7 +248,7 @@ def sprite_from_baked_folder(folder: str):
     height = int(info["height"])
     file_id = int(info["id"])
     name = str(info["name"])
-    t = str(info["type"])
+    t = str(info["type_name"])
 
     frame_files = sorted(glob.glob(os.path.join(folder, "frame_*.png")))
     print(frame_files)

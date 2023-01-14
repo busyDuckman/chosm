@@ -3,6 +3,7 @@ import os
 from PIL import Image
 
 from chosm.asset import Asset
+from chosm.game_constants import AssetTypes
 from helpers import pil_image_helpers as pih
 
 
@@ -14,8 +15,8 @@ class BinaryAsset(Asset):
     def __str__(self):
         return f"Binary File: id={self.file_id} len={len(self.data)}"
 
-    def get_type_name(self):
-        return "binary"
+    def get_type(self) -> AssetTypes:
+        return AssetTypes.BINARY
 
     def _gen_preview_image(self, preview_size) -> Image.Image:
         img = Image.new("RGB", size=(preview_size, preview_size))
