@@ -4,6 +4,7 @@ import os
 from PIL import Image
 
 from chosm.asset import Asset
+from chosm.game_constants import AssetTypes
 from game_engine.world import World
 
 import helpers.pil_image_helpers as pih
@@ -17,8 +18,8 @@ class WorldAsset(Asset):
     def __str__(self):
         return f"Palette File: id={self.file_id} num_cols={len(self.colors)}"
 
-    def get_type_name(self):
-        return "world"
+    def get_type(self) -> AssetTypes:
+        return AssetTypes.WORLD
 
     def _gen_preview_image(self, preview_size) -> Image.Image:
         img = Image.new("RGB", size=(preview_size, preview_size))

@@ -1,22 +1,30 @@
+import collections
 import datetime
+import fnmatch
 import json
+import logging
 import os
 import time
+from enum import Enum
 from functools import lru_cache
 from os.path import join
-from typing import List, Dict
+from threading import Lock
+from typing import List, Dict, Any
 
 from PIL import Image
 from slugify import slugify
 
 from chosm.asset import Asset
+from chosm.game_constants import AssetTypes, parse_asset_type
+from game_engine.map import load_map_from_dict, Map
+# from chosm.asset import Asset
+from game_engine.why import Why
 
 
 # AssetRecord:
 #   - built for use by the web server
 #   - store metadata for the viewer and editor
 #   - store a slug representing the folder
-#   - stack to override each other
 #   - validate their own structure
 #   - can bootstrap an Asset from primary files
 
@@ -30,33 +38,96 @@ from chosm.asset import Asset
 #   - can "bake" that data to an asset.
 #     - by this process, it will create secondary files from primary files
 
-class AssetRecord(object):
+def _is_hidden_file(folder: str, file_name: str):
+    """
+    Defines asset files that should not be considered part of the asset.
+    eg a ".desktop" file or something appeared.
+    """
+    return file_name.startswith(".")
+
+
+
+
+class AssetRecord(collections.abc.Mapping):
     def __init__(self, asset_path: str):
         if not os.path.isdir(asset_path):
             raise NotADirectoryError(asset_path)
 
         # bootstrap from info.json
-        self.asset_dir: str = asset_path  # set the path, or self.get_info() won't work
-        info: Dict = self.get_info()
-        self.file_id = info["id"]
-        self.name = info["name"]
-        self.type_name = info["type"]
-        self.created_timestamp = info["created"]
-        # self.slug = info["slug"]
+        self.folder: str = asset_path  # set the path, or self.get_info() won't work
 
-        if self.name is None or len(self.name.strip()) == 0:
-            name = f"FILEID_{self.file_id}"
-        self.slug = self._get_slug()
+        self.info: Dict[str, Any] = None
+        self.file_id: int = None
+        self.name: str = None
+        self.asset_type: AssetTypes = None
+        self.asset_type_as_string = None
+        self.created_timestamp: str = None
+        self.slug: str = None
 
-    def is_folder_valid(self):
-        return os.path.split(self.asset_dir)[1] == self.slug
+        self._file_names: List[str] = None
+        self._file_paths: List[str] = None
 
-    def _get_slug(self):
-        return slugify(f"{self.get_type_name()}_{self.name}")
+        self._file_path_by_name: Dict[str, str] = {}
 
-    @lru_cache(maxsize=None)
-    def get_info(self):
-        with open(join(self.asset_dir, "info.json")) as f:
+        self._mtime_info = 0
+        self._mtime_folder = 0
+
+        self._refresh_lock = Lock()
+
+        self.refresh()
+
+    def refresh(self, forced=False):
+        """
+        Refresh if anything changed.
+        :param forced: Refresh regardless.
+        :return: True if a refresh occurred
+        """
+
+        with self._refresh_lock:
+            mtime_info = os.path.getmtime(join(self.folder, "info.json"))
+            mtime_folder = os.path.getmtime(self.folder)
+
+            if forced or mtime_info != self._mtime_info or mtime_folder != self._mtime_folder:
+                self.info: Dict[str, Any] = self._read_info_file()
+                self.file_id: int = self.info["id"]
+                self.name: str = self.info["name"]
+                self.asset_type: str = parse_asset_type(self.info["type_name"])
+                self.asset_type_as_string = str(self.asset_type)
+                self.created_timestamp: str = self.info["created"]
+                self.slug: str = self.info["slug"]
+
+                self._file_names: List[str] = None
+                self._file_paths: List[str] = None
+
+                self._mtime_info = mtime_info
+                self._mtime_folder = mtime_folder
+
+                return True
+
+            return False
+
+    def _refresh_file_list(self, force=False):
+        if self._file_names is None or force:
+            with self._refresh_lock:
+                self._file_names = [f for f in os.listdir(self.folder) if os.path.isfile(join(self.folder, f))]
+                self._file_names = sorted([f for f in self._file_names if not _is_hidden_file(self.folder, f)])
+                self._file_paths = [join(self.folder, f) for f in self._file_names]
+                self._file_path_by_name: Dict[str, str] = {n: p for n, p in zip(self._file_names, self._file_paths)}
+
+                if len(self._file_names) == 0:
+                    logging.error("No files found for asset in path: path='" + self.folder + "'")
+
+    def is_valid(self) -> Why:
+        if os.path.split(self.folder)[1] != self.slug:
+            return Why.false("slug in info.json was different to folder name.")
+        if self.slug.startswith("-"):
+            return Why.false("slug starts with a '-'.")
+        if len(self.name.strip()) == 0:
+            return Why.false("Name can not be blank.")
+        return Why.true()
+
+    def _read_info_file(self) -> Dict[str, str]:
+        with open(join(self.folder, "info.json")) as f:
             return json.load(f)
 
     def __str__(self):
@@ -65,16 +136,93 @@ class AssetRecord(object):
     def __eq__(self, other):
         if isinstance(other, AssetRecord):
             return self.number == other.number and \
-                self.file_id == other.file_id and \
+                self.name == other.name and \
                 self.created_timestamp == other.created_timestamp and \
-                self.type_name == other.type_name
+                self.asset_type == other.asset_type
         return NotImplemented
 
-    def __hash__(self):
-        return hash((self.file_id, self.name, self.created_timestamp, self.type_name))
+    def __ne__(self, other):
+        return not self == other
 
-    def create_holder(self) -> Asset:
-        pass
+    def __hash__(self):
+        return hash((self.name, self.created_timestamp, self.asset_type))
+
+    def get_file_names(self, glob_exp: str = None, refresh_from_disk=False) -> List[str]:
+        """
+        Get the files (names only) associated with this asset.
+        """
+        self._refresh_file_list(force=refresh_from_disk)
+        if glob_exp is not None:
+            return list(fnmatch.filter(self._file_names, glob_exp))
+        else:
+            return self._file_names
+
+    def get_file_paths(self, glob_exp: str = None, refresh_from_disk=False) -> List[str]:
+        """
+        Get the files (full path) associated with this asset.
+        """
+        self._refresh_file_list(force=refresh_from_disk)
+        if glob_exp is not None:
+            return list(fnmatch.filter(self._file_paths, glob_exp))
+        else:
+            return self._file_paths
+
+    def get_file_path(self, name: str, refresh_from_disk=False) -> str:
+        self._refresh_file_list(force=refresh_from_disk)
+        return self._file_path_by_name[name]
+
+    def __getitem__(self, key):
+        return self.info[key]
+
+    def __iter__(self):
+        return self.info.__iter__()
+
+    def __len__(self):
+        return len(self.info)
+
+    def __contains__(self, item):
+        return item in self.info
+
+    def keys(self):
+        return self.info.keys()
+
+    def items(self):
+        return self.info.items()
+
+    def values(self):
+        return self.info.values()
+
+    def get(self, key):
+        return self.info.get(key)
+
+    def get(self, key, default):
+        return self.info.get(key, default)
+
+    def load_json_file(self, json_file_name) -> Dict[str, Any]:
+        path = join(self.folder, json_file_name)
+        assert os.path.isfile(path)
+        with open(path, 'rt') as f:
+            return json.load(f)
+
+    def load_txt_file_from_resource(self, file_name, remove_blank_lines=True) -> List[str]:
+        file_path = join(self.folder, file_name)
+        assert os.path.isfile(file_path)
+        with open(file_path, 'rt') as f:
+            lines = f.readlines()
+
+        if remove_blank_lines:
+            lines = [q for q in lines if len(q.strip()) > 0]
+
+        return lines
+
+    def load_asset(self) -> Asset:
+        return NotImplemented
+
+    def load_map(self) -> Map:
+        logging.info("loading map: asset = " + self.slug)
+        d = self.load_json_file("map.json")
+        the_map = load_map_from_dict(d)
+        return the_map
 
 
 

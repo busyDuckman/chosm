@@ -20,6 +20,7 @@ from numba import njit
 import helpers.stream_helpers as sh
 from chosm.asset import Asset
 from chosm.map_asset import MapAsset
+from chosm.resource_pack import ResourcePackInfo
 from chosm.sprite_asset import SpriteAsset
 from chosm.world_asset import WorldAsset
 from game_engine.world import World
@@ -27,7 +28,6 @@ from mam_game.binary_file import load_bin_file
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, normalise_file_name
 from mam_game.mam_map_organiser import combine_map_assets
 from mam_game.map_file_decoder import RawFile, load_map_file
-from mam_game.mmorpg_constants import default_new_policy
 from mam_game.npc_db_decoder import load_monster_database_file
 from mam_game.pal_file_decoder import load_pal_file, get_default_pal
 from chosm.pal_asset import PalAsset
@@ -48,6 +48,10 @@ class TOCRecord:
     def __str__(self):
         return f"[{hex(self.file_id)}->'{self.name}' (toc index {self.toc_position}, {self.length} bytes at {self.offset})]"
 
+
+# TODO: This needs a superclass, so the functionality of "asset manager" can be shared with:
+#   - other legacy game loading logic
+#   - asset reprocessing logic (eg: upscaling)
 
 class CCFile:
     def __init__(self, file_path, id_to_name_lut: Dict[int, str], ver: MAMVersion, platform: Platform):
@@ -565,13 +569,11 @@ class CCFile:
 
         print("  - output dir : " + str(bake_path))
 
-        # dump resource pack meta data
-        info = {"name": self.slug,
-                "chained_packs": [cc.slug for cc in self.chained_files],
-                "policy": default_new_policy("duckman").to_dict()}
-
-        with open(os.path.join(bake_path, "info.json"), 'w') as f:
-            json.dump(info, f, indent=2)
+        # Setup a resource pack, by creating info.json
+        rp = ResourcePackInfo(self.slug, "duckman", False)
+        rp.is_private = True
+        rp.author_info = "Developed by New World Computing, not in the public domain. Used here for research purposes only."
+        rp.save_info_file(bake_path)
 
         # bake all the files
         print(f"  - baking {len(self._resources)} resources: ", end="")

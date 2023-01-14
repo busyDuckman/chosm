@@ -7,6 +7,9 @@ from os.path import join
 from PIL import Image
 from slugify import slugify
 
+from chosm.game_constants import AssetTypes
+
+
 # AssetRecord:
 #   - built for use by the web server
 #   - store metadata for the viewer and editor
@@ -37,11 +40,15 @@ class Asset(object):
     def __str__(self):
         return f"Asset: id={self.file_id}"
 
-    def get_type_name(self):
+    def get_type(self) -> AssetTypes:
         return NotImplemented
 
+    def get_type_name(self):
+        return str(self.get_type()).lower()
+
+
     def _get_bake_dict(self):
-        d = {"id": self.file_id, "name": self.name, "type": self.get_type_name(),
+        d = {"id": self.file_id, "name": self.name, "type_name": self.get_type_name(),
              "slug": self.slug, "created": self.created_timestamp}
         return d
 

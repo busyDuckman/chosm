@@ -1,13 +1,15 @@
 import itertools
 import json
+import logging
 from os.path import join
 from typing import Dict
 
 from PIL import Image
 
 from chosm.asset import Asset
+from chosm.game_constants import AssetTypes
 from chosm.sprite_asset import SpriteAsset
-from game_engine.map import Map
+from game_engine.map import Map, load_map_from_dict
 
 
 class MapAsset(Asset):
@@ -23,8 +25,8 @@ class MapAsset(Asset):
     def __str__(self):
         return f"Palette File: id={self.file_id} num_cols={len(self.colors)}"
 
-    def get_type_name(self):
-        return "map"
+    def get_type(self) -> AssetTypes:
+        return AssetTypes.MAP
 
     def _gen_preview_image(self, preview_size) -> Image.Image:
         return self.gen_2d_map().resize((preview_size, preview_size), Image.NEAREST)
@@ -55,5 +57,16 @@ class MapAsset(Asset):
 
 
 def load_map_from_baked_folder(folder: str):
-    # TODO: implement this
+    logging.info("loading MapAsset: path = " + folder)
+    with open(join(folder, "info.json"), "r") as f:
+        info = json.load(f)
+
+    with open(join(folder, "map.json"), "r") as f:
+        map_info = json.load(f)
+
+    the_map = load_map_from_dict(map_info)
+    file_id = int(info["id"])
+    name = str(info["name"])
+    # TODO
+    #return MapAsset(file_id, name, the_map, layers)
     return NotImplemented

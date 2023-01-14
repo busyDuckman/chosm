@@ -33,8 +33,9 @@ class GameState:
     def __init__(self, world: World):
         self.party: PlayerParty = PlayerParty(10, 10, Direction.NORTH, "player", True, False, True)
         # self.current_world: WorldInstance = WorldInstance(world)
-        self.current_map: Map = world.get_default_map()
-        x, y, direction = self.map.get_spawn_info()
+
+        x, y, direction, spawn_map = world.get_spawn_info()
+        self.current_map: Map = spawn_map
         self.party.pos_x = x
         self.party.pos_y = y
         self.party.facing = direction

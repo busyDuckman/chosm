@@ -13,6 +13,7 @@ from PIL import Image
 from slugify import slugify
 
 from chosm.asset import Asset
+from chosm.game_constants import AssetTypes
 from game_engine.i18n.languages import normalise_lang_code, get_supported_languages
 from helpers import pil_image_helpers as pih
 
@@ -97,8 +98,8 @@ class TextDBAsset(Asset):
     def __str__(self):
         return f"Text Database File: id={self.file_id} num_tokens={len(self.tokens_to_translations)}"
 
-    def get_type_name(self):
-        return "text_database"
+    def get_type(self) -> AssetTypes:
+        return AssetTypes.TEXT_DB
 
     def tokens(self):
         return list(self.tokens_to_translations.keys())
