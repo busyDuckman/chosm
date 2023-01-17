@@ -51,17 +51,17 @@ Assets must be of a specific type, limited to:
   - Note: there are no "image" resources, everything is a sprite.
 
 The game server only loads asset metadata, to compose the html that will render a scene.
-It then sends the html to the client which will the retrieve the required resource files 
+It then sends the html to the client which will then retrieve the required resource files 
 from the server to render the scene.
 
 #### Assets have both an ID and a NAME. 
 A name must be present and is paired with the type to create a unique "slug"
-(primary means to identify a asset).
+(primary means to identify an asset).
 
 
 ID's (integer) are only optional metadata, They don't need to be unique.
 The ID's help support running legacy games; and enable certain game logic 
-(eg: spite 37, works with sound 37; or the ground texture id's match the 
+(eg: spite 37, works with sound 37; or the ground texture ID's match the 
 tile number in a map.)
 
 ## files and naming conventions
