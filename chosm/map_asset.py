@@ -33,15 +33,21 @@ class MapAsset(Asset):
 
     def gen_2d_map(self):
         some_tile = list(self.layers.values())[0]
-        w = self.game_map.width * some_tile.width
-        h = self.game_map.height * some_tile.height
-        map_img = Image.new("RGB", size=(w, h))
+        tile_w = some_tile.width
+        tile_h = some_tile.height
+        total_w = self.game_map.width * tile_w
+        total_h = self.game_map.height * tile_h
+        map_img = Image.new("RGB", size=(total_w, total_h))
 
         for x, y in itertools.product(range(self.game_map.width), range(self.game_map.height)):
-            x_pos, y_pos = (x * w, y * h)
-            frame_idx = self.game_map[x, y, "ground"]
-            frame = self.layers["ground"].frames[frame_idx]
-            map_img.paste(frame, (x_pos, y_pos), frame)
+            for layer_name in ["ground", "env", "building"]:
+                x_pos, y_pos = (x * tile_w, y * tile_h)
+                frame_idx = self.game_map[x, y, layer_name]
+
+                if layer_name == "ground" or frame_idx != 0:
+                    frames = self.layers[layer_name].frames
+                    frame = frames[frame_idx % len(frames)]
+                    map_img.paste(frame, (x_pos, y_pos), frame)
 
         return map_img
 

@@ -47,13 +47,13 @@
       <form method="post" id="glob-epr-form">
           <table>
               <tr>
-                  <td> <label for="glob-epr">filter</label> </td>
+                  <td> <label for="glob-epr">Filter</label> </td>
                   <td>
                     <input type="text" name="glob-epr" id="glob-epr", value="{{ glob_exp }}" style="width: 150px">
                   </td>
               </tr>
               <tr>
-                <td><label for="sort_order">filter</label></td>
+                <td><label for="sort_order">Sort</label></td>
                 <td>
                 <select name="sort_order" id="sort_order">
                     <option value="id">id</option>
@@ -79,7 +79,7 @@
                     <a href="{{ url_for('editor_view', pack_name=pack_name, asset_slug=slug) }}"
                        class="button_link"
                         style="width: 35%;">
-                    <img src="{{ url_for('get_file', pack_name=pack_name, asset_slug=slug, file_name="preview.jpg")  }}"
+                    <img src="{{ url_for('get_file', pack_name=pack_name, asset_slug=slug, file_name="_preview.jpg")  }}"
                          style="width: 64px">
                         {{ resources[slug].name }}
                     </a>

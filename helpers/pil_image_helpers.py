@@ -137,3 +137,24 @@ def annotate(image: Image.Image,
         draw.text((x_off, img.height - h + 1), bottom_text, (240, 255, 16), font=font)
 
     return img
+
+
+def hue_rotate(image: Image.Image, hue_shift_byte):
+    """
+    Hue rotation
+    :param image:
+    :param hue_shift_byte: 0-255, angle of rotation.
+    :return:
+    """
+    img2 = image.convert('HSV')
+    print(img2)
+    hsv = np.array(img2)
+    hsv_list = hsv.reshape((img2.width*img2.height, 3))
+    hsv_list[:, 0] += hue_shift_byte
+    hsv_list[:, 0] %= 255
+    hsv = hsv_list.reshape(hsv.shape)
+    r_hsv = Image.fromarray(hsv, mode="HSV")
+    r = r_hsv.convert(image.mode)  # return to original colour mode
+    return r
+
+

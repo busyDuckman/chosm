@@ -23,7 +23,7 @@ class WorldAsset(Asset):
 
     def _gen_preview_image(self, preview_size) -> Image.Image:
         img = Image.new("RGB", size=(preview_size, preview_size))
-        img = pih.annotate(img, "World", bottom_text=f"n={len(self.world.maps)}")
+        img = pih.annotate(img, "World", bottom_text=f"n={len(self.world._maps)}")
         return img
 
     def bake(self, file_path):

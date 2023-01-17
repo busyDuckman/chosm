@@ -34,14 +34,21 @@ def get_luts():
     return mm5_surface_lut, mm4_surface_lut, env_lut
 
 
-def read_map_meta_data(f):
+def read_map_meta_data(f, maze_data: RawFile):
     # 2 bytes: mazenumber, uint16 value indicating this map ID
     maze_id = sh.read_uint16(f)
+    if maze_id > 200:
+        maze_data.dump()
+        raise MAMFileParseError(maze_data, "Invalid maze ID")
 
     # 8 bytes, uint16 mazes_id's to the N, E, S, W
     joining_map_ids = sh.read_uint16_array(f, 4)
+    if any(q > 200 for q in joining_map_ids):
+        maze_data.dump()
+        raise MAMFileParseError(maze_data, f"Invalid joining max ID's: joining_ids='{joining_map_ids}'")
     order = [Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST]
     joining_map_ids = {d: x for d, x in zip(order, joining_map_ids)}
+
 
     # 2 bytes: mazeFlags
     # 2 bytes: mazeFlags2
@@ -154,7 +161,7 @@ class MaMTile:
 
 
 
-def load_map_file(maze_dat: RawFile,
+def load_map_file(maze_data: RawFile,
                   maze_mob: RawFile,
                   maze_evt: RawFile,
                   tile_sets: List[SpriteAsset],
@@ -164,7 +171,7 @@ def load_map_file(maze_dat: RawFile,
                   map_height = 16
                   ) -> MapAsset:
     # From the wiki: take the map_id from the filename, not the value in the file
-    map_id = int("".join([c for c in maze_dat.file_name if c.isdigit()]))
+    map_id = int("".join([c for c in maze_data.file_name if c.isdigit()]))
     total_tiles = map_width * map_height
 
     mm5_surface_lut, mm4_surface_lut, env_lut = get_luts()
@@ -175,7 +182,7 @@ def load_map_file(maze_dat: RawFile,
     else:
         raise MAMFileParseError(0, "", "Unsupported MAM version for maps")
 
-    f = io.BytesIO(bytearray(maze_dat.data))
+    f = io.BytesIO(bytearray(maze_data.data))
     # from: https://xeen.fandom.com/wiki/MAZExxxx.DAT_File_Format
     # 512 bytes: WallData, 16x16 uint16 values comprising the visual map data (floors, walls, etc...)
     map_data = sh.read_uint16_array(f, total_tiles)
@@ -186,7 +193,7 @@ def load_map_file(maze_dat: RawFile,
     # Read the rest of the file
     maze_slug, joining_map_ids, restricted_spells, \
         can_rest, can_save, is_dark, is_outside, \
-        wall_type_lut, surface_type_lut, default_floor_type = read_map_meta_data(f)
+        wall_type_lut, surface_type_lut, default_floor_type = read_map_meta_data(f, maze_data)
 
     layers = list(MaMTile.__annotations__.keys())
     the_map = Map(map_id, map_width, map_height, len(layers), layers)

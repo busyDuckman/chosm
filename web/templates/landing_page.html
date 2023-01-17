@@ -7,8 +7,9 @@
     <style>
        @import url('https://fonts.googleapis.com/css?family=Pirata+One|Bilbo+Swash+Caps&display=swap');
        {#@import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');#}
-       @import url('https://fonts.googleapis.com/css2?family=Goblin+One&display=swap');
-       @import url('https://fonts.googleapis.com/css2?family=Lato&display=swap');
+       {#@import url('https://fonts.googleapis.com/css2?family=Goblin+One&display=swap');#}
+       {#@import url('https://fonts.googleapis.com/css2?family=Lato&display=swap');#}
+       @import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@500&display=swap');
 
        html {
           {#background: url({{ url_for('static', path='gui/chosm_intro.jpg') }}) no-repeat center center fixed;#}
@@ -117,11 +118,15 @@
        @keyframes glowing {
             0%   {color: #4040b0;}
             50%  {color: #101060;}
+            50%  {color: #101060;}
             100% {color: #4040b0;}
         }
 
-
-
+       .console_font {
+           font-family: 'Inconsolata', monospace !important;
+           color: #404040 !important;
+           {#text-shadow: 0.5px 0.5px 1px #909090;#}
+       }
 
        .large_font {
            font-family: "Luminari";
@@ -178,8 +183,10 @@
 </head>
 <body>
 
-<span style="color: #404040">ver: {{ version }}</span><br>
-<a href="https://github.com/busyDuckman/chosm" target=”_blank” style="color: #404040;"> github</a>
+<span class="console_font" >Centred Horizon Ordered Sprite Montage (CHOSM)</span><br>
+<span class="console_font" >A research project, to explore some rendering ideas.</span><br>
+<span class="console_font">ver: {{ version }}</span><br>
+<a href="https://github.com/busyDuckman/chosm" target=”_blank” class="console_font"> github</a>
 
 <div class="title">
     CHOSM
@@ -187,13 +194,15 @@
 
 <div class="centered_menu">
     <div class="parchment">
-        <p class="large_font">New Game
+        <p class="large_font" onclick=gotoPage("game/main/")>
+{#           onclick=gotoPage("{{ url_for('game_view') }}>#}
+            New Game
     {#        <span class="small_font">Begin your journey.</span>#}
         </p>
         <p class="large_font">
             Continue
         </p>
-        <p class="large_font">
+        <p class="large_font" onclick=gotoPage("user/")>
             Login
         </p>
         <p class="large_font">

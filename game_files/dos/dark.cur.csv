@@ -1,5 +1,5 @@
 Name,Hash,Description
-MAZE0001.DAT,,# I have no idea where these names came from... They are not in the wiki. Did my old c# code brute force them?
+MAZE0001.DAT,,# See infer_cur_file_lut(...) to generate this data
 MAZE0002.DAT,,
 MAZE0003.DAT,,
 MAZE0004.DAT,,

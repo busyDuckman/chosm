@@ -12,7 +12,7 @@ import slugify
 from PIL import Image
 import helpers.pil_image_helpers as pih
 from chosm.asset import Asset
-from chosm.game_constants import AssetTypes
+from chosm.game_constants import AssetTypes, SpriteRoles, parse_sprite_role
 
 
 @dataclass
@@ -42,6 +42,10 @@ class AnimLoop:
                          self.ms_per_frame, self.loop)
         return left, right
 
+    @staticmethod
+    def make_static(frame_idx):
+        return AnimLoop("static_image", [frame_idx], 1000, False)
+
 
 class SpriteAsset(Asset):
     def __init__(self, file_id, name,
@@ -49,10 +53,12 @@ class SpriteAsset(Asset):
                  animations: List[AnimLoop]
                  ):
         super().__init__(file_id, name)
-        self.frames = frames
+        self.frames: List[Image.Image] = frames
         self.width = frames[0].width
         self.height = frames[0].height
         self.size = (self.width, self.height)
+        self.env_tags: List[str] = []
+        self.roles: List[SpriteRoles] = []
 
         self.animations: Dict[str, AnimLoop] = {a.slug: a for a in animations}
 
@@ -63,6 +69,24 @@ class SpriteAsset(Asset):
             if (frame.width, frame.height) != (self.width, self.height):
                 raise ValueError(f"Sprite had inconsistent frame sizes: file_id={self.file_id}, frame_num={i}")
 
+    def copy(self,
+              name,
+              file_id=None,
+              frames: List[Image.Image]=None,
+              animations: List[AnimLoop]=None):
+
+        if animations is None:
+            animations = [copy.deepcopy(a) for a in self.animations.values()]
+        if file_id is None:
+            file_id = self.file_id
+        if frames is None:
+            frames = [f.copy() for f in self.frames]
+        sprite = SpriteAsset(file_id, name, frames, animations)
+        sprite.env_tags = self.env_tags
+        sprite.roles = self.roles
+        sprite.tags = self.tags
+        return sprite
+
     def __str__(self):
         return f"sprite_file File: id={self.file_id} num_cols={len(self.colors)}"
 
@@ -71,6 +95,18 @@ class SpriteAsset(Asset):
 
     def num_frames(self) -> int:
         return len(self.frames)
+
+    def add_env_description(self, environment_name):
+        """
+        Environment description is used to group sprites that are designed to work together as a set.
+        eg: "town", or "dungeon"
+        """
+        if environment_name not in self.env_tags:
+            self.env_tags.append(environment_name)
+
+    def add_role(self, role: SpriteRoles):
+        if role not in self.roles:
+            self.roles.append(role)
 
     def crop(self, x, y, width, height, new_name=None):
         if self.size == (width, height):
@@ -81,11 +117,9 @@ class SpriteAsset(Asset):
         frames = [frame.crop((x, y, x2, y2)) for frame in self.frames]
         assert frames[0].width == width
         assert frames[0].height == height
-        anim = [copy.deepcopy(a) for a in self.animations.values()]
         if new_name is None:
             new_name = self.name + "_cropped"
-        sprite = SpriteAsset(self.file_id, new_name, frames, anim)
-        return sprite
+        return self.copy(new_name, frames=frames)
 
     def split(self,
               len_left_side: int,
@@ -106,8 +140,8 @@ class SpriteAsset(Asset):
         if right_name is None and self.name is not None:
             right_name = str(self.name) + "_right"
 
-        return SpriteAsset(left_id, left_name, left_frames, left_anims), \
-            SpriteAsset(right_id, right_name, right_frames, right_anims)
+        return self.copy(left_name, file_id=left_id, frames=left_frames, animations=left_anims), \
+            self.copy(right_name, file_id=right_id, frames=right_frames, animations=right_anims)
 
     def _get_bake_dict(self):
         info = super()._get_bake_dict()
@@ -122,6 +156,9 @@ class SpriteAsset(Asset):
             return d
 
         info["animations"] = [anim_dict(a) for a in self.animations.values()]
+
+        info["roles"] = [str(x) for x in self.roles]
+        info["env_tags"] = self.env_tags
         return info
 
     def _gen_preview_image(self, preview_size) -> Image.Image:
@@ -237,13 +274,10 @@ class SpriteAsset(Asset):
         #  output.webp
 
 
-def sprite_from_baked_folder(folder: str):
+def sprite_from_baked_folder(folder: str) -> SpriteAsset:
     with open(os.path.join(folder, "info.json"), "r") as f:
         info = json.load(f)
 
-    ms_per_frame = int(info["ms_per_frame"])
-    ping_pong = bool(info["ping_pong"])
-    loop = bool(info["loop"])
     width = int(info["width"])
     height = int(info["height"])
     file_id = int(info["id"])
@@ -252,6 +286,22 @@ def sprite_from_baked_folder(folder: str):
 
     frame_files = sorted(glob.glob(os.path.join(folder, "frame_*.png")))
     print(frame_files)
-    frames = [Image.load(f) for f in frame_files]
+    frames = [Image.open(f) for f in frame_files]
 
-    return SpriteAsset(file_id, name, frames, ms_per_frame, ping_pong, loop)
+    animations = []
+    for anim_info in info["animations"]:
+        # remove alternate time info that was dumped to the file, to make a valid kwargs
+        del anim_info["fps"]
+        del anim_info["seconds_per_loop"]
+        anim = AnimLoop(**anim_info)
+        animations.append(anim)
+
+    sprite = SpriteAsset(file_id, name, frames, animations=animations)
+    for role in info["roles"]:
+        sprite.add_role(parse_sprite_role(role))
+    for tag in info["env_tags"]:
+        sprite.add_env_description(tag.strip())
+    for tag in info["tags"]:
+        sprite.tag(tag.strip())
+
+    return sprite

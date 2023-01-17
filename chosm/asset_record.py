@@ -18,7 +18,7 @@ from chosm.asset import Asset
 from chosm.game_constants import AssetTypes, parse_asset_type
 from game_engine.map import load_map_from_dict, Map
 # from chosm.asset import Asset
-from game_engine.why import Why
+from helpers.why import Why
 
 
 # AssetRecord:

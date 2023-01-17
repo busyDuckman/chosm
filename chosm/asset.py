@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 from os.path import join
+from typing import List
 
 from PIL import Image
 from slugify import slugify
@@ -36,6 +37,7 @@ class Asset(object):
         self.name: str = name
         self.slug = slugify(f"{self.get_type_name()}_{self.name}")
         self.created_timestamp = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
+        self.tags: List[str] = []
 
     def __str__(self):
         return f"Asset: id={self.file_id}"
@@ -46,10 +48,14 @@ class Asset(object):
     def get_type_name(self):
         return str(self.get_type()).lower()
 
+    def tag(self, tag: str):
+        if tag not in self.tags:
+            self.tags.append(tag)
 
     def _get_bake_dict(self):
         d = {"id": self.file_id, "name": self.name, "type_name": self.get_type_name(),
-             "slug": self.slug, "created": self.created_timestamp}
+             "slug": self.slug, "created": self.created_timestamp,
+             "tags": self.tags}
         return d
 
     def _gen_preview_image(self, preview_size) -> Image.Image:
@@ -69,7 +75,7 @@ class Asset(object):
             json.dump(self._get_bake_dict(), f, indent=2)
 
         preview_image = self._gen_preview_image(128)
-        preview_image.save(join(file_path, "preview.jpg"))
+        preview_image.save(join(file_path, "_preview.jpg"))
 
     def __eq__(self, other):
         if isinstance(other, Asset):
