@@ -59,6 +59,12 @@ Running the web server:
     # API testing and doco
     http://127.0.0.1:8000/docs
 
+## Code doco
+
+The code and software structure is documented, see: 
+
+    docs/code_structure.md
+
 ## Concepts being explored
 The scope of this project is ambitious, I believe this type of engine offers
 some very interesting prospects; I am putting this vision into a separate file
