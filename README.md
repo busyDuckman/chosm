@@ -25,16 +25,18 @@ to source that material yourself to run the server. To do this copy the
 ## Running the code
 
 Requirements:
-  - Python 3.10 or higher, with all the trimmings.  
+  - Python 3.10 or higher, with all the trimmings.
 
-    
-    # For linux systems  
+
+Setup requirements for linux systems: 
+
+
     sudo apt install python3.10  
     sudo apt-get install python3.10-distutils
     python3.10 -m pip install --upgrade pip
     sudo apt-get install python3.10-dev    
 
-Setup:
+Setup python packages:
 
     pip install requirements.txt
 
@@ -47,8 +49,11 @@ Extracting data from cc files:
 Running the web server:
 
     python -m uvicorn web.chosm:app --reload
-    
-    # editor is at
+
+    # Landing page
+    http://127.0.0.1:8000    
+
+    # Editor is at
     http://127.0.0.1:8000/editor/main
 
     # API testing and doco
