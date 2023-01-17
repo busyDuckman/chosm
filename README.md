@@ -26,10 +26,10 @@ to source that material yourself to run the server. To do this copy the
 
 Requirements:
   - Python 3.10 or higher, with all the trimmings.  
-    
 
-    # for linux systems
-    sudo apt install python3.10
+    
+    # For linux systems  
+    sudo apt install python3.10  
     sudo apt-get install python3.10-distutils
     python3.10 -m pip install --upgrade pip
     sudo apt-get install python3.10-dev    
