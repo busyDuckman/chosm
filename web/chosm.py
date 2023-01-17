@@ -155,7 +155,7 @@ async def edit_asset_view(request: Request, pack_name, asset_slug):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-@app.get("/game/main/")
+@app.get("/game/main")
 async def game_view(request: Request):
     session: Session = sessions["debug_session"]
     game_state = session.game_state

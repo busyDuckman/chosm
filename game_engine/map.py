@@ -6,7 +6,7 @@ from typing import Dict, Tuple, List
 
 import numpy as np
 
-from game_engine.why import Why
+from helpers.why import Why
 from helpers.archetyped_table import ArchetypedTable, InstanceTable, DifferenceTable
 from mam_game.mam_constants import Direction
 
@@ -119,7 +119,8 @@ class Map:
 
 class MapInstance(Map):
     def __init__(self, base_map: Map):
-        super.__init__(base_map.width, base_map.height, base_map.num_layers, layer_names=base_map.layer_names)
+        super().__init__(base_map.map_identifier, base_map.width, base_map.height,
+                         base_map.num_layers, layer_names=base_map.layer_names)
         # To save ram, this table only stores the differences of this instance vs. the reference map.
         # If a lock is picked, or chest looted, the changes won't affect the master copy.
         self._map = InstanceTable(base_map._map)

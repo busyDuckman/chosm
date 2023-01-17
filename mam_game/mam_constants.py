@@ -1,5 +1,9 @@
+import logging
+import os
+import tempfile
 from dataclasses import dataclass
 from enum import Enum
+from os.path import join
 from typing import List, Tuple
 
 import slugify
@@ -35,6 +39,24 @@ class RawFile:
 
     def __repr__(self):
         return str(self)
+
+    def dump(self, file_path=None):
+        """
+        A function to dump out a files binary data (eg: for debug purposes).
+        :param file_path: A file path, a folder, or None to write to the temp folder.
+        """
+        if file_path is None:
+            file_name = f"{self.file_name}.dump"
+            file_path = join(tempfile.gettempdir(), file_name)
+        else:
+            file_path = str(file_path)
+            if os.path.isdir(file_path):
+                file_name = f"{self.file_name}.dump"
+                file_path = join(file_path, file_name)
+
+        logging.warning(f"Dumped RawFile: path='{file_path}'")
+        with open(file_path, 'wb') as f:
+            f.write(bytes(self.data))
 
 
 class MAMFileParseError(Exception):

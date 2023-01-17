@@ -5,8 +5,8 @@ from typing import List, Dict, Tuple
 from game_engine.dice import Roll
 from game_engine.game_engine import PlayerParty
 from game_engine.map import Map
-from game_engine.why import Why
-from game_engine.world import World
+from helpers.why import Why
+from game_engine.world import World, WorldInstance
 from mam_game.mam_constants import Direction
 
 class GameAction(Enum):
@@ -32,7 +32,7 @@ class GameAction(Enum):
 class GameState:
     def __init__(self, world: World):
         self.party: PlayerParty = PlayerParty(10, 10, Direction.NORTH, "player", True, False, True)
-        # self.current_world: WorldInstance = WorldInstance(world)
+        self.current_world: WorldInstance = WorldInstance(world)
 
         x, y, direction, spawn_map = world.get_spawn_info()
         self.current_map: Map = spawn_map

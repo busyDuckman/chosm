@@ -3,8 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+    <style>
+        .view {
+            border: solid black 1px;
+        }
+
+        .sky {
+            {#background: linear-gradient(to bottom, #2060a0 0%,#80c0f0 100%);#}
+            background-image: url('{{ url_for('get_file', pack_name=pack_name, asset_slug=slug, file_name="_preview.jpg")  }}')
+        }
+
+        .fog {
+            background: linear-gradient(rgba(255,255,255,0) 75%, rgba(255,255,255,0.5) 100%);
+        }
+        .ground {
+            {#background-image: url('/assets/environment/ground_desert.jpg');#}
+            {#background-image:#}
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform: scale(1);
+        }
+
+    </style>
 </head>
 <body>
+
+<div class='view' style="background: #333333; width: 43%; height: 66%; position: absolute; left: 4%; top: 9%">
+  <div style="position: absolute; z-index: 1; width: 100%; height: 100%">
+    <div class='sky' style="height: 45%; width: 100%;"></div>
+    <div class='ground' style="height: 55%; width: 100%;"></div>
+  </div>
+</div>
+
 
 </body>
 </html>

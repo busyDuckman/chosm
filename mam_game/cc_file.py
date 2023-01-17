@@ -19,6 +19,7 @@ from numba import njit
 
 import helpers.stream_helpers as sh
 from chosm.asset import Asset
+from chosm.game_constants import SpriteRoles
 from chosm.map_asset import MapAsset
 from chosm.resource_pack import ResourcePackInfo
 from chosm.sprite_asset import SpriteAsset
@@ -26,7 +27,8 @@ from chosm.world_asset import WorldAsset
 from game_engine.world import World
 from mam_game.binary_file import load_bin_file
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, normalise_file_name
-from mam_game.mam_map_organiser import combine_map_assets
+from mam_game.mam_sprite_alignments import flatten_ground_sprite, flatten_sky_sprite
+from mam_game.map_organiser import combine_map_assets
 from mam_game.map_file_decoder import RawFile, load_map_file
 from mam_game.npc_db_decoder import load_monster_database_file
 from mam_game.pal_file_decoder import load_pal_file, get_default_pal
@@ -436,24 +438,50 @@ class CCFile:
         def_pal = get_default_pal(self.mam_version, self.mam_platform)
         self._resources.append(def_pal)
 
-        self._bootstrap_monsters()
         self._bootstrap_maps()
-
-        # graphics for the 3d view
-        sprites = fnmatch.filter(self._toc_file_names, "*.sky")
-        sprites += fnmatch.filter(self._toc_file_names, "*.gnd")
-        sprites += fnmatch.filter(self._toc_file_names, "*.fwl")
-        sprites += fnmatch.filter(self._toc_file_names, "*.swl")
-        print(f"  - loading {len(sprites)} 3d view sprites: ", end='')
-        for f_name in sprites:
-            print(".", end='')
-            pal = self.get_pal_for_file(f_name)
-            raw = self._raw_data_lut[f_name]
-            sprite = load_sprite_file(raw, pal, self.mam_version, self.mam_platform)
-            self._resources.append(sprite)
-        print()
+        self.bootstrap_environment_sprites()
+        self._bootstrap_monsters()
 
         self._bootstrap_worlds()
+
+    def bootstrap_environment_sprites(self):
+        # graphics for the 3d view (environment ets)
+        print(f"  - loading environment sprites: ")
+        for ext, role in zip(["sky", "gnd", "srf"],
+                             [SpriteRoles.SKY, SpriteRoles.GROUND, SpriteRoles.GROUND]):
+            sprites = fnmatch.filter(self._toc_file_names, f"*.{ext}")
+            print(f"  - {ext} ({len(sprites)}): ", end='')
+            for f_name in sprites:
+                print(".", end='')
+
+                pal = self.get_pal_for_file(f_name)
+                raw: RawFile = self._raw_data_lut[f_name]
+                sprite = load_sprite_file(raw, pal, self.mam_version, self.mam_platform)
+
+                environment_name = os.path.splitext(f_name)[0].strip(".").lower()
+
+                sprite.add_role(role)
+                sprite.add_env_description(environment_name)
+
+                sprite.tag(f"type_{ext}")
+                sprite.tag(f"environment_{environment_name}")
+
+                self._resources.append(sprite)
+
+                if ext == "srf":
+                    sprite_flat = flatten_ground_sprite(sprite)
+                    self._resources.append(sprite_flat)
+                elif ext == "sky":
+                    sky_flat = flatten_sky_sprite(sprite)
+                    self._resources.append(sky_flat)
+            print()
+        print()
+
+        # sprites = fnmatch.filter(self._toc_file_names, "*.sky")
+        # sprites += fnmatch.filter(self._toc_file_names, "*.gnd")
+        # sprites += fnmatch.filter(self._toc_file_names, "*.fwl")
+        # sprites += fnmatch.filter(self._toc_file_names, "*.swl")
+
 
     def _bootstrap_worlds(self):
         maps: List[MapAsset] = self.get_resources(MapAsset)
@@ -592,8 +620,6 @@ class CCFile:
         return bake_path
 
 
-
-
 def parse_toc_csv(file_path) -> List[Tuple[str, int, str]]:
     """
     Loads a csv with known file names (a cc file does not list the file names)
@@ -610,32 +636,53 @@ def parse_toc_csv(file_path) -> List[Tuple[str, int, str]]:
         return [(n, parse_hash(h), d) for n, h, d in lines]
 
 
+def infer_cur_file_lut(num_mazes: int = 200):
+    lut = {CCFile.get_file_name_hash(f): f for f in ["MAZE.PTY", "MAZE.CHR", "MAZE.NAM"]}
+    for ext in ["DAT", "MOB", "EVT"]:
+        for i in range(num_mazes):
+            token = "0" if i < 100 else "X"
+            file_name = f"MAZE{token}{i:03d}.{ext}"
+            file_name_hash = CCFile.get_file_name_hash(file_name)
+
+            assert (file_name_hash not in lut)
+            lut[file_name_hash] = file_name
+    return lut
+
+
 def load_cc_file(path: str, ver: MAMVersion, platform: Platform) -> CCFile:
     p, f = os.path.split(path)
-    csv_path = os.path.join(p, (f+".csv").lower())
-    known_files = parse_toc_csv(csv_path)
-    id_to_name_lut = {CCFile.get_file_name_hash(k_name.strip()): k_name for k_name, _, _ in known_files}
+    if not f.lower().endswith(".cur"):
+        csv_path = os.path.join(p, (f+".csv").lower())
+        known_files = parse_toc_csv(csv_path)
+        id_to_name_lut = {CCFile.get_file_name_hash(k_name.strip()): k_name for k_name, _, _ in known_files}
+    else:
+        id_to_name_lut = infer_cur_file_lut()
     cc_file = CCFile(path, id_to_name_lut, ver, platform)
     return cc_file
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 def main():
     logging.basicConfig(level=logging.ERROR)
 
     started = time.time()
-    dark_cc = load_cc_file(f"../game_files/dos/DARK.CC",  MAMVersion.DARKSIDE, Platform.PC_DOS)
-    # ccf_dark_cc.bootstrap()
-    dark_cur = load_cc_file(f"../game_files/dos/DARK.CUR", MAMVersion.DARKSIDE, Platform.PC_DOS)
 
+    dark_cc = load_cc_file(f"../game_files/dos/DARK.CC",  MAMVersion.DARKSIDE, Platform.PC_DOS)
+    dark_cur = load_cc_file(f"../game_files/dos/DARK.CUR", MAMVersion.DARKSIDE, Platform.PC_DOS)
     mm5_cc = dark_cc.merge(dark_cur, to_copy=False)
     mm5_cc.bootstrap()
     mm5_cc.bake()
+
+    # mm4_cc = load_cc_file(f"../game_files/dos/XEEN.CC",  MAMVersion.CLOUDS, Platform.PC_DOS)
+    # mm4_cur = load_cc_file(f"../game_files/dos/XEEN.CUR", MAMVersion.CLOUDS, Platform.PC_DOS)
+    # mm4_cc = mm4_cc.merge(mm4_cur, to_copy=False)
+    # mm4_cc.bootstrap()
+    # mm4_cc.bake()
+
     finished = time.time() - started
     print(f"Finished in {finished:.1f} seconds")
 
-
     # ccf_intro_cc = load_cc_file(f"../game_files/dos/INTRO.CC", MAMVersion.DARKSIDE, Platform.PC_DOS)
-    # ccf_xeen_cc =  load_cc_file(f"../game_files/dos/XEEN.CC",  MAMVersion.CLOUDS,   Platform.PC_DOS)
     # ccf_mm3_cc =   load_cc_file("../game_files/dos/MM3.CC",    MAMVersion.MM3,      Platform.PC_DOS)
 
     # ccf_dark_cc.bake()

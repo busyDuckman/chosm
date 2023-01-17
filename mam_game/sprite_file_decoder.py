@@ -2,6 +2,7 @@ import copy
 import glob
 import io
 import json
+import logging
 import os.path
 from typing import List, Dict, Tuple, Any
 from PIL import Image
@@ -185,17 +186,19 @@ def load_sprite_file(raw_file: RawFile, pal: PalAsset,
     # create the frames
     frames = []
     for i in range(num_frames):
+        frame_image = Image.new("RGBA", size=(frame_width, frame_height))
+
         cell_a, cell_b = cell_offsets[i*2], cell_offsets[i*2+1]
         if cell_a == 0:
-            raise MAMFileParseError(f"Invalid sprite: error='first cell can't be empty', frame={i}")
-
-        frame_image = Image.new("RGBA", size=(frame_width, frame_height))
-        cells = [cell_a] if cell_b == 0 else [cell_a, cell_b]
-        for cell_offset in cells:
-            cell, cell_image = cell_image_lut[cell_offset]
-            x, y, _, _ = cell
-            # frame_image.paste(cell_image, (x, 0), cell_image)
-            frame_image.paste(cell_image, (0, 0), cell_image)
+            # raise MAMFileParseError(raw_file, f"Invalid sprite: error='first cell can't be empty', frame={i}")
+            logging.warning("First frame of sprite was empty: file="+str(raw_file))
+        else:
+            cells = [cell_a] if cell_b == 0 else [cell_a, cell_b]
+            for cell_offset in cells:
+                cell, cell_image = cell_image_lut[cell_offset]
+                x, y, _, _ = cell
+                # frame_image.paste(cell_image, (x, 0), cell_image)
+                frame_image.paste(cell_image, (0, 0), cell_image)
         frames.append(frame_image)
 
     animations = get_animations_in_ccfile_sprite(raw_file.file_name, len(frames), 66, ver, platform)
