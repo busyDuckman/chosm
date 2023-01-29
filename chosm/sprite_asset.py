@@ -13,6 +13,7 @@ from PIL import Image
 import helpers.pil_image_helpers as pih
 from chosm.asset import Asset
 from chosm.game_constants import AssetTypes, SpriteRoles, parse_sprite_role
+from helpers.misc import prune_kwargs
 
 
 @dataclass
@@ -43,8 +44,9 @@ class AnimLoop:
         return left, right
 
     @staticmethod
-    def make_static(frame_idx):
-        return AnimLoop("static_image", [frame_idx], 1000, False)
+    def make_static(frame_idx, slug: str = None):
+        slug = slug if slug is not None else "static_image"
+        return AnimLoop(slug, [frame_idx], 1000, False)
 
 
 class SpriteAsset(Asset):
@@ -153,6 +155,7 @@ class SpriteAsset(Asset):
             d = asdict(a)
             d["fps"] = a.get_fps()
             d["seconds_per_loop"] = a.get_seconds_per_loop()
+            d["class"] = f"anim_{self.slug}_{a.slug}"
             return d
 
         info["animations"] = [anim_dict(a) for a in self.animations.values()]
@@ -194,26 +197,38 @@ class SpriteAsset(Asset):
             num_frames = len(a.frame_idx_list)
             sprite_sheet_url = f"_anim_{a.slug}.png"
 
-            cls_txt = f"""
-                .anim_{self.slug}_{a.slug} {{
-                    width: {self.width}px;
-                    height: {self.height}px;
-                    position: absolute;
-                    background-image: url('{sprite_sheet_url}');
-                    transform: scale({scale});
-                    background-repeat: repeat-x;
-                    animation-name: play_{self.slug}_{a.slug};
-                    animation-duration: {a.get_seconds_per_loop()}s;
-                    animation-timing-function: steps({num_frames});
-                    animation-iteration-count: {loop_token};
-                }}
-
-                @keyframes play_{self.slug}_{a.slug} {{
-                   from  {{ background-position:    0px; }}
-                     to  {{ background-position:    -{num_frames * self.width}px; }}
-                }}
-
-                """
+            if num_frames > 1:
+                cls_txt = f"""
+                    .anim_{self.slug}_{a.slug} {{
+                        width: {self.width}px;
+                        height: {self.height}px;
+                        position: absolute;
+                        background-image: url('{sprite_sheet_url}');
+                        transform: scale({scale});
+                        background-repeat: repeat-x;
+                        animation-name: play_{self.slug}_{a.slug};
+                        animation-duration: {a.get_seconds_per_loop()}s;
+                        animation-timing-function: steps({num_frames});
+                        animation-iteration-count: {loop_token};
+                    }}
+    
+                    @keyframes play_{self.slug}_{a.slug} {{
+                       from  {{ background-position:    0px; }}
+                         to  {{ background-position:    -{num_frames * self.width}px; }}
+                    }}
+    
+                    """
+            else:
+                cls_txt = f"""
+                    .anim_{self.slug}_{a.slug} {{
+                        width: {self.width}px;
+                        height: {self.height}px;
+                        position: absolute;
+                        background-image: url('{sprite_sheet_url}');
+                        transform: scale({scale});
+                        background-repeat: no-repeat;
+                    }}
+                    """
 
             css += textwrap.dedent(cls_txt)
 
@@ -291,9 +306,7 @@ def sprite_from_baked_folder(folder: str) -> SpriteAsset:
     animations = []
     for anim_info in info["animations"]:
         # remove alternate time info that was dumped to the file, to make a valid kwargs
-        del anim_info["fps"]
-        del anim_info["seconds_per_loop"]
-        anim = AnimLoop(**anim_info)
+        anim = AnimLoop(**prune_kwargs(AnimLoop.__init__, anim_info))
         animations.append(anim)
 
     sprite = SpriteAsset(file_id, name, frames, animations=animations)

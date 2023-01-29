@@ -1,16 +1,22 @@
 import logging
 import os
-from typing import List, Dict, NamedTuple
+from typing import List, Dict, NamedTuple, Optional
 
-from fastapi import FastAPI, Request
+import xxhash
+from fastapi import FastAPI, Request, Cookie
 from fastapi.responses import FileResponse, HTMLResponse, ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi_utils.tasks import repeat_every
+from starlette import status
+from starlette.responses import RedirectResponse
 
+from chosm.dynamic_file_manager import DynamicFileManager
 from chosm.game_constants import AssetTypes
 from chosm.resource_pack import ResourcePack
 from game_engine.game_state import GameState
-from game_engine.session import Session
+from game_engine.session import Session, SessionManager
+from game_engine.single_vanishing_point_painting import SingleVanishingPointPainting
 from game_engine.world import World
 
 from web.route_user import user_router
@@ -28,12 +34,23 @@ resource_folder = ""
 resource_packs: Dict[str, ResourcePack] = {}
 chosm_version = "0.05"
 
-sessions: dict[str, Session] = {}
+dynamic_folder = ""
+dyna_file_manager: DynamicFileManager = None
+
+
+def save_game(user_name, game_state: GameState):
+    pass
+
+
+def load_game(user_name) -> GameState:
+    mam5_pack: ResourcePack = resource_packs['dark-cccur-darkside-pc-dos']
+    mam5_world = mam5_pack.load_world("main_world")
+    return GameState(mam5_world, mam5_pack)
 
 
 @app.on_event("startup")
 async def startup_event():
-    global resource_folder, resource_packs
+    global resource_folder, resource_packs, dynamic_folder, dyna_file_manager
     print("CWD: " + os.getcwd())
 
     resource_folder = "game_files/baked"
@@ -43,19 +60,33 @@ async def startup_event():
         rp = ResourcePack(d.path)
         resource_packs[rp.name] = rp
 
+    dynamic_folder = "game_files/dynamic_files"
+    assert os.path.exists(dynamic_folder)
+    dyna_file_manager = DynamicFileManager(dynamic_folder)
+
     # create an initial session
     # print(resource_packs)
     mam5_pack: ResourcePack = resource_packs['dark-cccur-darkside-pc-dos']
     mam5_world = mam5_pack.load_world("main_world")
 
-    debug_session: Session = Session("test_user", GameState(mam5_world))
-    sessions["debug_session"] = debug_session
+    debug_session: Session = Session("test_user", os.urandom(32), GameState(mam5_world, mam5_pack))
+
+
+@repeat_every(seconds=30)
+def remove_expired_tokens_task() -> None:
+    SessionManager.tick()
 
 
 @app.get("/")
-async def root(request: Request):
+async def root(request: Request, session_id: Optional[str] = Cookie(default=None, alias="sessionID")):
+    print("Session: " + str(session_id))
+    user_name = None
+    if (session := SessionManager.get_active_session(session_id)) is not None:
+        user_name = session.user_name
+
     context = dict(version=chosm_version,
-                   request=request)
+                   request=request,
+                   user_name=user_name)
 
     return templates.TemplateResponse("landing_page.html", context)
 
@@ -66,6 +97,15 @@ async def manage_packs():
 
     packs = sorted(list(resource_packs.keys()))
     return ORJSONResponse(packs)
+
+
+# @app.post("/api/resource-management/packs", response_class=ORJSONResponse)
+# async def add_resource_pack(request: Request, pack_name):
+#
+#     rp = ResourcePackInfo(self.slug, "duckman", False)
+#     rp.is_private = True
+#     rp.author_info = "Developed by New World Computing, not in the public domain. Used here for research purposes only."
+#     rp.save_info_file(bake_path)
 
 
 @app.get('/api/resource-management/packs/{pack_name}/assets', response_class=ORJSONResponse)
@@ -100,7 +140,6 @@ async def get_file(pack_name, asset_type, asset_name, file_name):
     pack = resource_packs[pack_name]
     file_path = pack[asset_type, asset_name].get_file_path(file_name)
     return FileResponse(path=file_path)
-
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -156,10 +195,55 @@ async def edit_asset_view(request: Request, pack_name, asset_slug):
 
 # ----------------------------------------------------------------------------------------------------------------------
 @app.get("/game/main")
-async def game_view(request: Request):
-    session: Session = sessions["debug_session"]
-    game_state = session.game_state
-    current_map = session.game_state.current_map
-    context = dict(request=request, session=session, game_state=game_state, current_map=current_map)
+async def game_view(request: Request, session_id: Optional[str] = Cookie(default=None, alias="sessionID")):
+    game_state = current_map = pack_name = pack = None
+
+    session = SessionManager.get_active_session(session_id)
+    if session is not None:
+        game_state = session.game_state
+        current_map = session.game_state.current_map
+        pack_name = game_state.pack.name
+        pack = game_state.pack
+
+    context = dict(request=request,
+                   pack=pack, pack_name=pack_name,
+                   session=session, game_state=game_state, current_map=current_map)
 
     return templates.TemplateResponse(f'world_view.html', context)
+
+
+@app.get("/download/ground_mask/{size_x}/{size_y}/{steps_fwd}/{steps_right}")
+async def ground_mask(steps_fwd, steps_right,
+                      view_dist=5, size_x=1280, size_y=720,
+                      horizon_screen_ratio=0.5,
+                      local_tile_ratio=0.9,
+                      bird_eye_vs_worm_eye=0):
+
+    # get file name
+    txt_fwd = "BF"[steps_fwd > 0] + str(abs(steps_fwd))
+    txt_right = "LR"[steps_right > 0] + str(abs(steps_right))
+    h = xxhash.xxh64((horizon_screen_ratio, local_tile_ratio, bird_eye_vs_worm_eye)).hexdigest()
+
+    file = f"{txt_fwd}_{txt_right}_{h}.webp"
+    fmt = f"{size_x}_{size_y}_{view_dist}_sharp"
+    path, is_valid = dyna_file_manager.querey(["ground_mask", fmt], file)
+
+    # regen file
+    if not is_valid:
+        svp_composer = SingleVanishingPointPainting([], [], size=size,
+                                                    bird_eye_vs_worm_eye=bird_eye_vs_worm_eye, view_dist=view_dist,
+                                                    horizon_screen_ratio=horizon_screen_ratio,
+                                                    local_tile_ratio=local_tile_ratio)
+
+        img = svp_composer.draw_mask(steps_fwd, steps_right)
+        img.save(path)
+
+    # done
+    return FileResponse(path=path)
+
+
+
+
+
+
+

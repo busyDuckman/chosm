@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Chosm</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='gui/parchment.css') }}"/>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='gui/overlay.css') }}"/>
     <style>
        @import url('https://fonts.googleapis.com/css?family=Pirata+One|Bilbo+Swash+Caps&display=swap');
        {#@import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');#}
@@ -202,7 +203,7 @@
         <p class="large_font">
             Continue
         </p>
-        <p class="large_font" onclick=gotoPage("user/")>
+        <p class="large_font" onclick=openNav()>
             Login
         </p>
         <p class="large_font">
@@ -215,13 +216,22 @@
             Community
         </p>
 
-        <span class="small_font">Logged in as Sir Duckmanath.</span>
+        {% if user_name %}
+            <span class="small_font" style="margin-left: 20px">Logged in as {{ user_name }}.</span>
+        {% else %}
+            <span class="small_font" style="margin-left: 40px">Not logged in.</span>
+        {% endif %}
     </div>
 </div>
+
+
+{%  include 'login_overlay.html' %}
 
 <div class="acknoledement">
     We acknowledge the Ngunnawal people as the traditional custodians of the land on which this game was made.
 </div>
+
+
 
 
 <script>
@@ -229,6 +239,7 @@ function gotoPage(where) {
     window.location.href = where
   {#document.getElementById("demo").innerHTML = "Hello World";#}
 }
+
 </script>
 </body>
 </html>

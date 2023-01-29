@@ -11,6 +11,7 @@
 }
 
 
+
 /*.parchment{*/
 /*   background-image: url("{{ url_for('static', path='gui/parchment_large_0001.webp') }}") ;*/
 /*   background-repeat:no-repeat;*/
