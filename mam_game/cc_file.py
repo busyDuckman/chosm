@@ -155,59 +155,6 @@ class CCFile:
     def chain_cc_file(self, other):
         self.chained_files[other.file] = other
 
-    # def all_resources(self) -> Iterator[MAMFile]:
-    #     pals = list(set(self.resources_pal.values()))
-    #     return itertools.chain(pals)
-
-    # def _set_file(self, name, file_id, mam_file: MAMFile):
-    #     if file_id is None:
-    #         raise ValueError(f"Key can not be none: file={str(file_id)}")
-    #     self._files_by_id[file_id] = mam_file
-    #     self._files_by_name[name] = mam_file
-
-    # def get_file(self,
-    #              name_or_id: Literal[str, int],
-    #              chained_cc_file_name: str = None):
-    #     # check if redirect
-    #     if chained_cc_file_name is not None:
-    #         self._chained_files[chained_cc_file_name].get_file(name_or_id)
-    #
-    #     # check if file was loaded previously
-    #     if type(name_or_id) == int:
-    #         if name_or_id in self._files_by_id:
-    #             return self._files_by_id[name_or_id]
-    #         r = self._toc_lut_by_id.get(name_or_id, None)
-    #     else:
-    #         name_or_id = normalise_file_name(name_or_id)
-    #         if name_or_id in self._files_by_name:
-    #             return self._files_by_name[name_or_id]
-    #         r = self._toc_lut_by_name.get(name_or_id, None)
-    #
-    #     if r is None:
-    #         raise ValueError(f"key not found: file={self.file}, key={name_or_id}")
-    #
-    #     # Load from cc_file data
-    #     try:
-    #         mam_file = self.load_mam_file(r.file_id, r.name, self._data_lut_by_id[r.file_id])
-    #         if mam_file is not None:
-    #             self._set_file(r.name, r.file_id, mam_file)
-    #             return mam_file
-    #     except MAMFileParseError as ex:
-    #         logging.error(ex.message)
-    #         raise ex
-    #     # raise MAMFileParseError(r.file_id, self.file, "File not loaded, parse function returned None (perhaps unknown file type)")
-    #     return None  # TODO, uncomment above
-
-
-    # def parse_all_files(self):
-    #     for r in self.toc:
-    #         try:
-    #             self.get_file(r.file_id)
-    #         except MAMFileParseError as ex:
-    #             logging.error(ex.message)
-    #
-    #     print(sorted(list(set([os.path.splitext(r.name)[1].lower() for r in self.toc if r.name is not None]))))
-    #     print(f"  - Loaded {len(self._files_by_id)} files of {self.num_files}")
 
     def _read_toc(self, f, id_to_name_lut) -> List[TOCRecord]:
         """
@@ -324,94 +271,6 @@ class CCFile:
             data = self.decrypt(data)
         return RawFile(toc_record.file_id, toc_record.name, data)
 
-    # def load_mam_file(self, file_id: int,
-    #                   name: str,
-    #                   data: List,
-    #                   fmt: str = None) -> MAMFile:
-    #     if name is not None:
-    #         name = name.strip().lower()
-    #     else:
-    #         name = "#" + str(file_id)
-    #
-    #     if fmt is None:
-    #         f_name, fmt = [s.strip('.').lower() for s in os.path.splitext(name)]
-    #
-    #         # some files don't have an extension
-    #         if fmt == '':
-    #             name_lut = {"fnt": "fnt", "nullsnd": "voc"}
-    #             fmt = name_lut.get(f_name, '')
-    #
-    #     # make the name more meaningful
-    #     # extended_name = f"{name}@{self.file}"
-    #     sprite_formats = ['mon', '0bj', 'sky', 'til', 'att']
-    #     # sprite_formats = ['att', 'fac', 'fwl', 'gnd', 'icn',
-    #     #                   'int', 'mon', '0bj', 'pic', 'sky', 'swl', 'til',
-    #     #                   'twn', 'vga']  # 'fnt'
-    #
-    #     thing_formats = ['obj']
-    #     text_formats = ['txt']
-    #     raw_img_formats = ['raw']
-    #     surface_formats = ['srf']
-    #     pal_formats = ['pal']
-    #     audio_formats = ['voc']
-    #     music_formats = ['m']
-    #     script_formats = ['evt']
-    #     maze_formats = ['dat', 'mob']
-    #     unknown_fmt = ['', 'brd', 'buf', 'drv', 'hed', 'out', 'wal', 'xen', 'zom', 'fnt']
-    #     binary_fmt = ['bin']
-    #     monster_db_fmt = ['mdb']  # note: not an actual extension in the .cc files AFAIK
-    #
-    #     match fmt:
-    #         case ext if ext in sprite_formats:
-    #             logging.info("Loading sprite: " + name)
-    #
-    #             pal = self.get_pal_for_file(name)
-    #             return load_sprite_file(file_id, name, data, pal, self.mam_version, self.mam_platform)
-    #
-    #         case ext if ext in thing_formats:
-    #             logging.info("Loading thing: " + name)
-    #
-    #         case ext if ext in text_formats:
-    #             logging.info("Loading text file: " + name)
-    #
-    #         case ext if ext in raw_img_formats:
-    #             logging.info("Loading raw image: " + name)
-    #
-    #         case ext if ext in surface_formats:
-    #             logging.info("Loading surface: " + name)
-    #
-    #         case ext if ext in pal_formats:
-    #             logging.warning("Loading palette: " + name)
-    #             return load_pal_file(file_id, name, data, self.mam_version, self.mam_platform)
-    #
-    #         case ext if ext in audio_formats:
-    #             logging.info("Loading audio sfx file: " + name)
-    #
-    #         case ext if ext in music_formats:
-    #             logging.info("Loading music file: " + name)
-    #
-    #         case ext if ext in script_formats:
-    #             logging.info("Loading script file: " + name)
-    #
-    #         case ext if ext in maze_formats:
-    #             logging.info("Loading maze file: " + name)
-    #
-    #         case ext if ext in unknown_fmt:
-    #             logging.info("Unknown unknown file: " + name)
-    #
-    #         case ext if ext in binary_fmt:
-    #             logging.info("Loading binary file: " + name)
-    #             return load_bin_file(file_id, name, data, self.mam_version, self.mam_platform)
-    #
-    #         case ext if ext in monster_db_fmt:
-    #             logging.info("Loading monster database file: " + name)
-    #             return load_monster_database_file(file_id, name, data, self.mam_version, self.mam_platform)
-    #
-    #         case _:
-    #             logging.info("Unknown file (new format): " + name)
-    #
-    #     return None
-
     def get_pal_for_file(self, name):
         pal = None
         match self.mam_version:
@@ -438,11 +297,25 @@ class CCFile:
         def_pal = get_default_pal(self.mam_version, self.mam_platform)
         self._resources.append(def_pal)
 
+        self._bootstrap_faces()
         self._bootstrap_maps()
         self.bootstrap_environment_sprites()
         self._bootstrap_monsters()
 
         self._bootstrap_worlds()
+
+
+    def _bootstrap_faces(self):
+        print(f"  - loading faces: ")
+        sprites = fnmatch.filter(self._toc_file_names, f"*.fac")
+        for f_name in sprites:
+            print(".", end='')
+            pal = self.get_pal_for_file(f_name)
+            raw: RawFile = self._raw_data_lut[f_name]
+            sprite = load_sprite_file(raw, pal, self.mam_version, self.mam_platform)
+            self._resources.append(sprite)
+        print()
+
 
     def bootstrap_environment_sprites(self):
         # graphics for the 3d view (environment ets)

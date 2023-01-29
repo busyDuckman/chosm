@@ -3,86 +3,209 @@
 <head>
   <title>Welcome Adventurer.</title>
   <meta content='width=device-width, initial-scale=1' name='viewport'>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='gui/parchment.css') }}"/>
+    <style>
+        .parchment_2 {
+           background-image: url("{{ url_for('static', path='gui/parchment_2.webp') }}") ;
+           background-repeat:no-repeat;
+           background-size: 100% 100%;
+           padding: 20px;
+           padding-left: 50px;
+           padding-top: 40px;
+           border-radius: 10px;
+           height: {{ p_height }}px;
+       }
+
+        h1::first-letter {
+          color: #202020;
+          float: left;
+          font: 1.7em/1em Morris;
+          text-shadow: 1px 1px 1px #c0c0c0;
+            {#text-shadow: 1px 1px 1px #EAC200;#}
+          /*{#margin: 0 .5rem;#}*/
+        }
+
+        h1 {
+            font-family: "Luminari";
+            font-size: 30px;
+        }
+
+        label {
+            font-family: "Luminari";
+           font-size: 15px;
+           color: #300000;
+        }
+
+
+        input[type=button], input[type=submit], input[type=reset] {
+          background-color: #b67600a0;
+          {#border: none;#}
+          color: #7F3300;
+          padding: 5px 10px;
+          width: 75px;
+          text-decoration: unset;
+          margin: 4px 2px;
+          cursor: pointer;
+        }
+
+        .under_line {
+            {#background-color: transparent;#}
+            {#border: none;#}
+            {#border-bottom: #404040 dashed 2px;#}
+        }
+
+        input[type=password], input[type=text],
+        input[type=password]:-webkit-autofill, input[type=text]:-webkit-autofill {
+            background-color: transparent;
+            border: none;
+            border-bottom: #404040 dashed 2px;
+        }
+
+
+        select {
+            background-color: wheat;
+            font-family: "Luminari";
+            font-size: 15px;
+        }
+
+        .parchment_button {
+            border: #300000 solid 1px; !important;
+            background-color: #303030;
+            color: silver;
+            font-family: "Luminari";
+        }
+
+    </style>
 </head>
 <body>
 
-<form id="registerForm" action="/user/register" method="post">
-  <h1>Register</h1>
-  <p id="registerStatus"></p>
-    <table>
-        <tr>
-            <td><label for="emailInput" style="width: 500px; clear: both">E-Mail</label></td>
-            <td><input id="emailInput" name="email" placeholder="E-Mail" type="email"></td>
-        </tr>
+<div class="parchment_2">
+    {% if session is none %}
+{#        <form id="loginForm" action="/user/login" method="post">#}
+        <form id="loginForm">
+            <h1>Login</h1>
+            <table>
+                <tr>
+                    <td><label for="loginUsernameInput">Username</label></td>
+                    <td><input class="under_line" id="loginUsernameInput" name="username" placeholder="E-Mail or username" type="text"></td>
+                </tr>
+                <tr>
+                    <td><label for="loginPasswordInput">Password</label></td>
+                    <td><input class="under_line" id="loginPasswordInput" name="password" placeholder="Password" type="password"></td>
+                </tr>
+                <tr>
+{#                    <td><input id="loginSubmit" type="submit" value="Login"></td>#}
+                    <td><input id="loginSubmit" type="button" value="Login" onclick="doLogin()"></td>
+                </tr>
+            </table>
+        </form>
 
-        <tr>
-            <td><label for="emailInput">username</label></td>
-            <td><input id="usernameInput" name="username" placeholder="Username" type="text"> </td>
-        </tr>
+            <form id="registerForm" action="/user/register" method="post">
+      <h1>Register</h1>
+      <p id="registerStatus"></p>
+        <table>
+            <tr>
+                <td><label for="emailInput" style="width: 500px; clear: both">E-Mail</label></td>
+                <td><input class="under_line" id="emailInput" name="email" placeholder="E-Mail" type="email"></td>
+            </tr>
 
-        <tr>
-            <td><label for="passwordInput">Password</label>
-            <td><input id="passwordInput" name="password" placeholder="Password" type="password"></td>
-        </tr>
-        <tr>
-            <td><label for="langInput">Language</label>
-            <td>
-              <select name="language" id="langInput">
-                {% for code, lang in supported_languages %}
-                    {% if code == "ENG" %}
-                        <option value="{{ code }}" selected>{{ lang }}</option>
-                    {% else %}
-                        <option value="{{ code }}">{{ lang }}</option>
-                    {% endif %}
-                {% endfor %}
-              </select>
-            </td>
-        </tr>
+            <tr>
+                <td><label for="emailInput">username</label></td>
+                <td><input class="under_line" id="usernameInput" name="username" placeholder="Username" type="text"> </td>
+            </tr>
 
-        <tr>
-            <td><label for="pronounInput">Pronouns</label>
-            <td>
-              <select name="Pronoun" id="pronounInput">
-                  <option value="poetic">poetic; thou / thy </option>
-                  <option value="royal">royal; one / one's </option>
-                  <option value="publican">publican; ye / thine </option>
-                  <option value="masculine">masculine; he / his </option>
-                  <option value="feminine">feminine; she / her </option>
-                  <option value="neutral">neutral; xe / xem </option>
-                  <option value="it">putter of lotion in the basket; it / it's </option>
-              </select>
-            </td>
-        </tr>
+            <tr>
+                <td><label for="passwordInput">Password</label>
+                <td><input class="under_line" id="passwordInput" name="password" placeholder="Password" type="password"></td>
+            </tr>
+            <tr>
+                <td><label for="langInput">Language</label>
+                <td>
+                  <select name="language" id="langInput">
+                    {% for code, lang in supported_languages %}
+                        {% if code == "ENG" %}
+                            <option value="{{ code }}" selected>{{ lang }}</option>
+                        {% else %}
+                            <option value="{{ code }}">{{ lang }}</option>
+                        {% endif %}
+                    {% endfor %}
+                  </select>
+                </td>
+            </tr>
 
-        </tr>
-            <td><input id="registerSubmit" type="submit" value="Submit"></td>
-        </tr>
-    </table>
+            <tr>
+                <td><label for="pronounInput">Pronouns</label>
+                <td>
+                  <select name="Pronoun" id="pronounInput">
+                      <option value="poetic">poetic; thou / thy </option>
+                      <option value="royal">royal; one / one's </option>
+                      <option value="publican">publican; ye / thine </option>
+                      <option value="masculine">masculine; he / his </option>
+                      <option value="feminine">feminine; she / her </option>
+                      <option value="neutral">neutral; xe / xem </option>
+                      <option value="it">lotion basket putter; it / it's </option>
+                  </select>
+                </td>
+            </tr>
 
+            </tr>
+                <td><input id="registerSubmit" type="submit" value="Submit"></td>
+            </tr>
+        </table>
+
+    </form>
+
+{#    <div style="height: 50px"></div>#}
+    {% else %}
+        <div style="height: 50px"></div>
+        <h1>Logged In</h1>
+        <form id="logoutForm">
+        Logged in as {{ session.user_name }}<br><br>
+        <input id="logoutSubmit" type="button" value="Logout" onclick="doLogout()">
+        </form>
+        <div style="height: 150px"></div>
+    {% endif %}
+
+
+<form id="done" style="height: 30px">
+    <input id="doneButton" type="button" value="Done" onclick="onDone()" style="float: right; margin-right: 30px">
 </form>
+<div style="height: 40px"></div>
 
-<form id="loginForm">
-  <h1>Login</h1>
-  <p id="loginStatus"></p>
-  <label for="loginEmailInput">
-    E-Mail
-    <input id="loginEmailInput" name="username" placeholder="E-Mail" type="email">
-  </label>
-  <label for="loginPasswordInput">
-    Password
-    <input id="loginPasswordInput" name="password" placeholder="Password" type="password">
-  </label>
-  <input id="loginSubmit" type="submit" value="Submit">
 
-</form>
-<div>
-  <h1>Accessing private routes</h1>
-  <p> Make request to a private route:</p>
-  <button id="privateRequest">Request</button>
-  <p id="privateStatus"></p>
 </div>
 </body>
 
+<script>
+    function onDone() {
+        {#parent.location.href=parent.location.href#}
+        parent.location.reload();
+    }
+
+    function doLogout() {
+        fetch('/user/logout', {method: 'POST'})
+        location.reload()
+    }
+
+    function doLogin() {
+        var formElement = document.getElementById('loginForm');
+        var data = new FormData(formElement);
+        fetch('/user/login', {
+            method: 'POST',
+            body: data,
+        })
+            .then(resp => resp.text())
+            .then(data => {
+                location.reload()
+            })
+            .catch(error => {
+                console.error(error);
+            });
+    }
+
+      {#ev.preventDefault();#}
+  {#    location.reload()#}
+</script>
 
 {#<script>#}
 {#  const registerSubmit = document.getElementById("registerSubmit");#}

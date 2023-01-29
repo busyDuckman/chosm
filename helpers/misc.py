@@ -1,4 +1,5 @@
-from typing import Dict
+import inspect
+from typing import Dict, Any
 
 
 # class SliceProxy(object):
@@ -39,6 +40,18 @@ def popo_from_dict(target, info: Dict):
     return target
 
 
+def prune_kwargs(func, kwargs: Dict[str, Any]):
+    """
+    Reduces a dictionary to only the members matching a functions argument list.
+    :param func:    A function
+    :param kwargs:  A dictionary that could be a **kwargs to func, but has too many entries.
+    :return: kwargs suitable for calling func.
+    """
+    args = list(inspect.getargs(func.__code__).args)
+    args = set([a for a in args if a not in ["self", "args", "kwargs"]])
+    return {k: v for k, v in kwargs.items() if k in args}
+
+
 def main():
     class Person:
         def __init__(self, name):
@@ -56,6 +69,13 @@ def main():
 
         def load(self, d):
             popo_from_dict(self, d)
+
+    print(prune_kwargs(popo_from_dict, {"foo": "bar", "name": "Bob"}))
+    print(prune_kwargs(main, {"foo": "bar", "name": "Bob"}))
+    print(prune_kwargs(Person.__init__, {"foo": "bar", "name": "Bob"}))
+    Person(**prune_kwargs(Person.__init__, {"foo": "bar", "name": "Bob"}))
+
+    print("\n--------------------------------------\n")
 
     print(popo_to_dict(Person("Bob")))
 

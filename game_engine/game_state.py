@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Dict, Tuple
 
+from chosm.resource_pack import ResourcePack
 from game_engine.dice import Roll
 from game_engine.game_engine import PlayerParty
 from game_engine.map import Map
@@ -30,9 +31,10 @@ class GameAction(Enum):
 
 
 class GameState:
-    def __init__(self, world: World):
+    def __init__(self, world: World, pack: ResourcePack):
         self.party: PlayerParty = PlayerParty(10, 10, Direction.NORTH, "player", True, False, True)
         self.current_world: WorldInstance = WorldInstance(world)
+        self.pack: ResourcePack = pack
 
         x, y, direction, spawn_map = world.get_spawn_info()
         self.current_map: Map = spawn_map
@@ -59,4 +61,6 @@ class GameState:
 
         self.current_world.take_turn(new_location)
         return Why.true()
+
+
 

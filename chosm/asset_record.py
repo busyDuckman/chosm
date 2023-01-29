@@ -1,23 +1,14 @@
 import collections
-import datetime
 import fnmatch
 import json
 import logging
 import os
-import time
-from enum import Enum
-from functools import lru_cache
 from os.path import join
 from threading import Lock
 from typing import List, Dict, Any
-
-from PIL import Image
-from slugify import slugify
-
 from chosm.asset import Asset
 from chosm.game_constants import AssetTypes, parse_asset_type
 from game_engine.map import load_map_from_dict, Map
-# from chosm.asset import Asset
 from helpers.why import Why
 
 
@@ -46,8 +37,6 @@ def _is_hidden_file(folder: str, file_name: str):
     return file_name.startswith(".")
 
 
-
-
 class AssetRecord(collections.abc.Mapping):
     def __init__(self, asset_path: str):
         if not os.path.isdir(asset_path):
@@ -71,6 +60,9 @@ class AssetRecord(collections.abc.Mapping):
 
         self._mtime_info = 0
         self._mtime_folder = 0
+
+        self.animations: Dict[str, Dict[str, Any]] = {}
+        self.idle_animation: Dict[str, Any] = None
 
         self._refresh_lock = Lock()
 
@@ -101,6 +93,14 @@ class AssetRecord(collections.abc.Mapping):
 
                 self._mtime_info = mtime_info
                 self._mtime_folder = mtime_folder
+
+                if "animations" in self.info:
+                    self.animations = {}
+                    for anim_info in self.info["animations"]:
+                        self.animations[anim_info["slug"]] = anim_info
+
+                    if "idle" in self.animations:
+                        self.idle_animation = self.animations["idle"]
 
                 return True
 
@@ -223,6 +223,7 @@ class AssetRecord(collections.abc.Mapping):
         d = self.load_json_file("map.json")
         the_map = load_map_from_dict(d)
         return the_map
+
 
 
 

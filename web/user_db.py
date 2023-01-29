@@ -80,19 +80,21 @@ def verify_password(plaintext: str, hashed: str):
 
 @manager.user_loader()
 def get_user_by_name(name: str) -> Optional[User]:
-    with ChosmDBSession().begin() as db:
-        user = db.query(User).where(User.username == name).first()
+    # with ChosmDBSession().begin() as db:
+    with ChosmDBSession() as session:
+        user = session.query(User).where(User.username == name).first()
     return user
 
 
-def create_user(name: str, email: str, password: str) -> bool:
+def create_user(name: str, email: str, password: str) -> User:
     hashed_pw = hash_password(password)
     with ChosmDBSession() as session:
         user = User(username=name, email=email, pw_hash=hashed_pw)
         print("new user: ", user)
         session.add(user)
         session.commit()
-        return True
+        return User
+    return None
 
 
 

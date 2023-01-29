@@ -64,6 +64,7 @@ def simplify_ground_sprite(gnd: SpriteAsset):
 
 
 def flatten_ground_sprite(gnd: SpriteAsset, new_name=None) -> SpriteAsset:
+    # The ground is composed of 25 odd sprites that are grid squared transformed to a vanishing point perspective.
     outdoor_surface_pos_lut = get_draw_structs()
     img = Image.new(mode="RGBA", size=(216, 73))
     for i, frame in enumerate(gnd.frames):
@@ -73,10 +74,11 @@ def flatten_ground_sprite(gnd: SpriteAsset, new_name=None) -> SpriteAsset:
 
     if new_name is None:
         new_name = gnd.name + "_flat"
-    return gnd.copy(new_name, frames=[img], animations=[AnimLoop.make_static(0)])
+    return gnd.copy(new_name, frames=[img], animations=[AnimLoop.make_static(0, slug="idle")])
 
 
 def flatten_sky_sprite(sky: SpriteAsset, new_name=None) -> SpriteAsset:
+    # The sky sprite is to images. Upper sky in frame 0 lower sky in frame 1.
     cropped_frames = []
     for frame in sky.frames:
         bounds = pih.image_bounds_transparent_background(frame)
@@ -86,7 +88,7 @@ def flatten_sky_sprite(sky: SpriteAsset, new_name=None) -> SpriteAsset:
     img = pih.stack_images(cropped_frames)
     if new_name is None:
         new_name = sky.name + "_flat"
-    return sky.copy(new_name, frames=[img], animations=[AnimLoop.make_static(0)])
+    return sky.copy(new_name, frames=[img], animations=[AnimLoop.make_static(0, slug="idle")])
 
 
 def main():

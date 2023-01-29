@@ -19,8 +19,15 @@ translators
 toml
 bcrypt
 # fastapi_keycloak
+fastapi-utils
+xxhash
+
+sympy
+numpy
 
 python-dotenv==0.19.2
 supertokens-python
 
 auth0-python
+
+jwt
