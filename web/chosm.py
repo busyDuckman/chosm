@@ -205,6 +205,8 @@ async def game_view(request: Request, session_id: Optional[str] = Cookie(default
         pack_name = game_state.pack.name
         pack = game_state.pack
 
+    current_map.map_identifier
+
     context = dict(request=request,
                    pack=pack, pack_name=pack_name,
                    session=session, game_state=game_state, current_map=current_map)

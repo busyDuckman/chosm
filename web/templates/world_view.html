@@ -27,6 +27,9 @@
 {#    {% set sky_class = pack[sky_sprite].animations["idle"]["class"] %}#}
     {% set sky_class = pack[sky_sprite].idle_animation["class"] %}
 
+    {% set  %}
+    {% set sky_class = pack[sky_sprite].idle_animation["class"] %}
+
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -62,6 +65,8 @@
             .ground {
                 {#background-image: url('/assets/environment/ground_desert.jpg');#}
                 {#background-image:#}
+
+                {#background-image: url('{{ url_for('get_file', ) }}')#}
                 background-size: 100% 100%;
                 background-repeat: no-repeat;
                 width: 100%;
@@ -88,7 +93,7 @@
       <div style="position: absolute; z-index: 1; width: 100%; height: 100%">
         <div class='{{ sky_class }} fill' style="height: 50%; width: 100%;"></div>
     {#    <div class='sky' style="height: 45%; width: 100%;"></div>#}
-    {#    <div class='ground' style="height: 55%; width: 100%;"></div>#}
+        <div class='ground' style="height: 50%; width: 100%;"></div>
       </div>
     </div>
 

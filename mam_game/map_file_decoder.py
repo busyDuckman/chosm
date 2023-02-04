@@ -1,11 +1,11 @@
 import io
 import logging
 from dataclasses import dataclass, asdict
-from typing import List, Dict
+from typing import List, Dict, Any
 
 from chosm.map_asset import MapAsset
 from chosm.sprite_asset import SpriteAsset
-from game_engine.map import Map
+from game_engine.map import Map, AssetLut
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, spell_slug, RawFile, Direction
 import helpers.stream_helpers as sh
 
@@ -31,7 +31,9 @@ def get_luts():
                                          "LAVAMNT.WAL", "PALM.WAL",
         "DMOUNT.WAL"]
 
-    return mm5_surface_lut, mm4_surface_lut, env_lut
+    return AssetLut("ground", dict(enumerate(mm5_surface_lut))), \
+           AssetLut("ground", dict(enumerate(mm4_surface_lut))), \
+           AssetLut("env", dict(enumerate(env_lut)))
 
 
 def read_map_meta_data(f, maze_data: RawFile):
@@ -99,10 +101,9 @@ class MAMMapAsset(MapAsset):
     def __init__(self, file_id,
                  name,
                  game_map: Map,
-                 layers: Dict[str, SpriteAsset],
                  joining_map_ids, restricted_spells,
                  can_rest, can_save, is_dark, is_outside):
-        super().__init__(file_id, name, game_map, layers)
+        super().__init__(file_id, name, game_map)
         self.joining_map_ids = joining_map_ids
         self.restricted_spells = restricted_spells
         self.can_rest = can_rest
@@ -158,18 +159,23 @@ class MaMTile:
     has_object: bool
 
 
-
-
-
 def load_map_file(maze_data: RawFile,
                   maze_mob: RawFile,
                   maze_evt: RawFile,
-                  tile_sets: List[SpriteAsset],
+
                   ver: MAMVersion,
                   platform: Platform,
-                  map_width = 16,
-                  map_height = 16
+
+                  map_width=16,
+                  map_height=16,
                   ) -> MapAsset:
+    """
+    Loads a mam from a .cc file
+    :param maze_data: a maze____.dat
+    :param maze_mob:  a maze____.mob, if one exists
+    :param maze_evt:  a maze____.evt, if one exists
+    :return:
+    """
     # From the wiki: take the map_id from the filename, not the value in the file
     map_id = int("".join([c for c in maze_data.file_name if c.isdigit()]))
     total_tiles = map_width * map_height
@@ -195,8 +201,10 @@ def load_map_file(maze_data: RawFile,
         can_rest, can_save, is_dark, is_outside, \
         wall_type_lut, surface_type_lut, default_floor_type = read_map_meta_data(f, maze_data)
 
+    # the fields in the data class are the layer names we want.
     layers = list(MaMTile.__annotations__.keys())
-    the_map = Map(map_id, map_width, map_height, len(layers), layers)
+
+    the_map = Map(map_id, map_width, map_height, layers, [])
 
     # create the map
     for y in range(map_height):
@@ -242,14 +250,9 @@ def load_map_file(maze_data: RawFile,
     the_map.recompress_map()
     # tileset_name = "outdoor.til"
 
-    layers = {"ground": "outdoor_tile_ground.til",
-              "env": "outdoor_tile_env.til",
-              "building": "outdoor_tile_building.til"}
-
-    layers = {k: next(t for t in tile_sets if t.name == f) for k, f in layers.items()}
 
     # tile_set = [t for t in tile_sets if t.name == tileset_name][0]
-    map_file = MAMMapAsset(map_id, f"map_{map_id:04d}", the_map, layers,
+    map_file = MAMMapAsset(map_id, f"map_{map_id:04d}", the_map,
                         joining_map_ids, restricted_spells,
                         can_rest, can_save, is_dark, is_outside
                         )
