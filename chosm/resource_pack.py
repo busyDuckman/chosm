@@ -41,8 +41,10 @@ class ResourcePackInfo:
     def __init__(self, name: str, admin_username: str, creative_commons: bool):
         """
         ResourcePack meta-data, without asset management stuff.
-        used to solve the "info.json" / ResourcePack obj chicken/egg situation.
-        Creat this class, if you want to generate an info.json file.
+        The base class for ResourcePack, but the inheritance is not done for classical OOP purposes.
+
+        As ResourcePack can only be loaded from "info.json"; this class is used to
+        solve the "info.json" / "ResourcePack instance" chicken/egg situation.
         """
         self.name = name
         self.admin_username: str = admin_username
@@ -74,6 +76,26 @@ class ResourcePackInfo:
 
 
 class ResourcePack(ResourcePackInfo):
+    """
+    A resource pack is a folder with an "info.json" and subdirectories that contain game assets.
+    This class is the logic of retrieving assets from such a folder.
+
+    This class is intended to be memory resident on a running game server. As such it is a tool for accessing asset
+    metadata and file locations.
+
+    It maps either a slug, or a (AssetTypes, name) pair, to a AssetRecord that represents asset data in a subdirectory.
+
+    By example:
+      resource_pack["sprite-ice-dragon-027"]
+      resource_pack[AssetTypes.SPRITE, "ice-dragon-027"]
+
+    TODO: override and include are just stubs for now.
+    Resource Packs can interact with each other in two ways:
+      - override: A slug not present in this pack will map to the slug in the pack being overriden.
+      - include:  A special @ slug redirects to the named resource pack.
+                  eg: "sprite-ice-dragon-027@stock_dragons"
+                  Note: if stock_dragons overrides another class, the include carries through as you would expect.
+    """
     def __init__(self, base_uri):
         super().__init__(None, None, None)
         self._base_uri = base_uri
@@ -182,7 +204,6 @@ class ResourcePack(ResourcePackInfo):
         else:
             return {k: v for k, v in self._asset_record_lut.items() if fnmatch.fnmatch(k, glob_exp)}
 
-
     def get_sprites(self):
         return self.get_assets_by_type(AssetTypes.SPRITE)
 
@@ -190,7 +211,7 @@ class ResourcePack(ResourcePackInfo):
         """
         by example:
             resource_pack["sprite-ice-dragon-027"]
-            resource_pack[Sprite, "ice-dragon-027"]
+            resource_pack[AssetTypes.SPRITE, "ice-dragon-027"]
         """
         if isinstance(key, str):
             # key is a  slug

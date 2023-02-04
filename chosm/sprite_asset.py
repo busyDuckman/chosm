@@ -10,10 +10,12 @@ from typing import List, Dict, Tuple, Any
 import imageio
 import slugify
 from PIL import Image
+from numpy.lib.index_tricks import RClass
+
 import helpers.pil_image_helpers as pih
 from chosm.asset import Asset
 from chosm.game_constants import AssetTypes, SpriteRoles, parse_sprite_role
-from helpers.misc import prune_kwargs
+from helpers.misc import prune_kwargs, SliceDescriber
 
 
 @dataclass
@@ -84,9 +86,9 @@ class SpriteAsset(Asset):
         if frames is None:
             frames = [f.copy() for f in self.frames]
         sprite = SpriteAsset(file_id, name, frames, animations)
-        sprite.env_tags = self.env_tags
-        sprite.roles = self.roles
-        sprite.tags = self.tags
+        sprite.env_tags = copy.copy(self.env_tags)
+        sprite.roles = copy.copy(self.roles)
+        sprite.tags = copy.copy(self.tags)
         return sprite
 
     def __str__(self):
@@ -127,16 +129,24 @@ class SpriteAsset(Asset):
               len_left_side: int,
               left_name: str = None, right_name: str = None,
               left_id: int = None, right_id: int = None) -> Tuple:
+        """
+        Split the frames in this sprite, to create two new sprites.
+        :param len_left_side: How many frames in the first sprite, all other frames go to the second sprite.
+        :param left_name:
+        :param right_name:
+        :param left_id:
+        :param right_id:
+        :return:
+        """
         left_frames = self.frames[:len_left_side]
         right_frames = self.frames[len_left_side:]
         split_anims = [a.split(len_left_side) for a in self.animations.values()]
         left_anims = [q[0] for q in split_anims]
         right_anims = [q[1] for q in split_anims]
 
-        if left_id is None:
-            left_id = self.file_id + 0xffffffff1 if self.file_id is not None else None
-        if right_id is None:
-            right_id = self.file_id + 0xffffffff2 if self.file_id is not None else None
+        left_id = self.file_id if left_id is None else left_id
+        right_id = self.file_id if right_id is None else right_id
+
         if left_name is None and self.name is not None:
             left_name = str(self.name) + "_left"
         if right_name is None and self.name is not None:
@@ -144,6 +154,29 @@ class SpriteAsset(Asset):
 
         return self.copy(left_name, file_id=left_id, frames=left_frames, animations=left_anims), \
             self.copy(right_name, file_id=right_id, frames=right_frames, animations=right_anims)
+
+    def copy_frames(self, frame_slice: slice, new_name=None, new_id=None, reference_anim_name="idle"):
+        """
+        Copy the selected frames and create a new Sprite, with a new "idle" animation based on just those frames.
+        :param reference_anim_name: The animation archetype.
+        :param frame_slice: A slice of the frames to keep, (use misc.helpers.Slicer[])
+        :return:
+        """
+        # it needs to be an array of frames, the slice may be an integer
+        if isinstance(frame_slice, int):
+            frames = [self.frames[frame_slice]]
+        else:
+            frames = self.frames[frame_slice]
+
+        new_id = self.file_id if new_id is None else new_id
+        new_name = self.name + "_" + slugify(SliceDescriber[frame_slice]) if new_name is None else new_name
+
+        # create a new, simple, animation for the extracted frames.
+        reference_anim = self.animations.get(reference_anim_name, list(self.animations.values())[0])
+        loop = reference_anim.loop and len(frames) > 0
+        anim_loop = AnimLoop.make_simple("idle", len(frames), reference_anim.ms_per_frame, loop, False)
+
+        return self.copy(new_name, file_id=new_id, frames=frames, animations=[anim_loop])
 
     def _get_bake_dict(self):
         info = super()._get_bake_dict()

@@ -42,7 +42,7 @@ def to_single_map(new_map_identifier, sorted_maps: List[MAMMapAsset], width_supe
     merged_map = copy.copy(sorted_maps[0])
     gm = merged_map.game_map
     merged_map.game_map = Map(new_map_identifier, width_super_map * sub_map_width, height_super_map * sub_map_height,
-                              gm.num_layers, gm._layer_names)
+                              gm.layer_names, gm.luts)
 
     for sub_map in sorted_maps:
         # if sub_map.map_pos_x != 0:
