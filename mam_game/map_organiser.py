@@ -41,6 +41,7 @@ def to_single_map(new_map_identifier, sorted_maps: List[MAMMapAsset], width_supe
     # TODO: Does this shortcut (assuming all maps have the ame attributes) matter?
     merged_map = copy.copy(sorted_maps[0])
     gm = merged_map.game_map
+    merged_map.change_name(new_map_identifier)
     merged_map.game_map = Map(new_map_identifier, width_super_map * sub_map_width, height_super_map * sub_map_height,
                               gm.layer_names, gm.luts)
 
@@ -64,8 +65,12 @@ def combine_map_assets(map_assets: List[MAMMapAsset],
     organised = organise_maps(map_assets)
     single_maps = []
     for i, (sorted_maps, width, height) in enumerate(organised):
-        print("combining map map:", width, height)
-        single_map = to_single_map(i, sorted_maps, width, height)
+        # This is the final name used in the resource pack
+        # Note: the name has nothing to do with the original maze_id number in the .cc file.
+        map_name = f"map_{i:04d}"
+        print(f"Creating combined map: name={map_name}, size=({width},{height}) num_input_maps={len(sorted_maps)}")
+
+        single_map = to_single_map(map_name, sorted_maps, width, height)
         single_maps.append(single_map)
 
     return single_maps

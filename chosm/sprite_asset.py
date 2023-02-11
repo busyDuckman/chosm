@@ -8,7 +8,7 @@ from dataclasses import dataclass, asdict
 from os.path import join
 from typing import List, Dict, Tuple, Any
 import imageio
-import slugify
+from slugify import slugify
 from PIL import Image
 from numpy.lib.index_tricks import RClass
 
@@ -37,7 +37,7 @@ class AnimLoop:
         frame_idx_list = list(range(num_frames))
         if ping_pong:
             frame_idx_list = list(range(num_frames)) + list(reversed(range(num_frames - 1)))
-        return AnimLoop(slugify.slugify(name), frame_idx_list, ms_per_frame, loop)
+        return AnimLoop(slugify(name), frame_idx_list, ms_per_frame, loop)
 
     def split(self, size_left):
         left = AnimLoop(self.slug, [f for f in self.frame_idx_list if f < size_left], self.ms_per_frame, self.loop)
@@ -266,18 +266,18 @@ class SpriteAsset(Asset):
             css += textwrap.dedent(cls_txt)
 
         # just the sprite sheet
-        for i in range(self.num_frames()):
-            frame_css = f"""
-
-            .image_{self.slug}_frame_{i:04d} {{
-                width: {self.width}px;
-                height: {self.height}px;
-                background-image: url('{sprite_sheet_url}');
-                background-position:  {-i * self.width}px;
-            }}
-            """
-            # position: absolute;
-            css += textwrap.dedent(frame_css)
+        # for i in range(self.num_frames()):
+        #     frame_css = f"""
+        #
+        #     .image_{self.slug}_frame_{i:04d} {{
+        #         width: {self.width}px;
+        #         height: {self.height}px;
+        #         background-image: url('{sprite_sheet_url}');
+        #         background-position:  {-i * self.width}px;
+        #     }}
+        #     """
+        #     # position: absolute;
+        #     css += textwrap.dedent(frame_css)
 
         return css
 

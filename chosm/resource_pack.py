@@ -1,12 +1,14 @@
 import datetime
 import logging
 import os
+import pathlib
 from dataclasses import dataclass
+from itertools import chain
 from os.path import join
 import json
 import fnmatch
 from functools import lru_cache
-from typing import Dict, Any, List, Type, Union
+from typing import Dict, Any, List, Type, Union, Literal
 
 from slugify import slugify
 
@@ -40,10 +42,10 @@ class ResourcePackError(Exception):
 class ResourcePackInfo:
     def __init__(self, name: str, admin_username: str, creative_commons: bool):
         """
-        ResourcePack meta-data, without asset management stuff.
-        The base class for ResourcePack, but the inheritance is not done for classical OOP purposes.
+        ResourcePack meta-data, without asset management code.
 
-        As ResourcePack can only be loaded from "info.json"; this class is used to
+        This is the base class for ResourcePack, but the inheritance is not done for classical OOP purposes.
+        As a ResourcePack can only be loaded from "info.json"; this class is used to
         solve the "info.json" / "ResourcePack instance" chicken/egg situation.
         """
         self.name = name
@@ -204,8 +206,14 @@ class ResourcePack(ResourcePackInfo):
         else:
             return {k: v for k, v in self._asset_record_lut.items() if fnmatch.fnmatch(k, glob_exp)}
 
-    def get_sprites(self):
+    def get_sprites(self) -> Dict[str, AssetRecord]:
         return self.get_assets_by_type(AssetTypes.SPRITE)
+
+    def get_sprites_for_map(self, map_name) -> List[AssetRecord]:
+        the_map: Map = self[AssetTypes.MAP, map_name].load_map()
+        sprite_slugs = set(chain(*[lut.values() for lut in the_map.luts]))
+        return [s for s in self.get_sprites().values() if s.slug in sprite_slugs]
+
 
     def __getitem__(self, key) -> Union[AssetRecord, List[AssetRecord]]:
         """
@@ -259,6 +267,47 @@ class ResourcePack(ResourcePackInfo):
         #
         # return self._cached_maps[name]
 
+    # def generate_all_css(self):
+    #     """
+    #     Creates a css file linking to the css code for all assets in this resource pack.
+    #
+    #     There hare hundreds of .css files (one per game sprite, because the animation is done in css).
+    #     Embedding in theo .html response just the .css files needed to render a scene would burden the
+    #     server with extra work and lengthen the html response creating bandwidth overhead. It's also
+    #     complicates the html template logic, to try and figure out all used assets prior
+    #     to rendering, just to build a list of .css imports.
+    #
+    #     This function creates a single .css file that has everything in this asset pack bundled into it.
+    #     :return:
+    #     """
+    #
+    #     # TODO: handle included and overriden files
+    #     # TODO: need a common way to included and overriden files without circular loops.
+    #
+    #     sprites = self.get_assets_by_type(AssetTypes.SPRITE)
+    #     css_files = [sprite.get_file_path("_animation.css") for sprite in sprites.values()]
+    #     # css_files = [str(pathlib.Path(f).absolute()) for f in css_files]
+    #     # f"/download/resource-packs/{pack_name}/by_type/{asset_type}/by_name/{asset_name}/{file_name}"
+    #     print(css_files[0])
+    #     import_statements = [f'@import "{f}";' for f in css_files]
+    #
+    #     css = f"<!-- All sprite animations in the {slugify(self.name)} resource pack -->\n\n"
+    #     css += "\n".join(import_statements)
+    #     css += "\n"
+    #
+    #     return css
+
+    def get_modification_time(self) -> datetime.datetime:
+        # TODO: This may not work for an updated asset.
+        #       It needs to be properly tested
+        ts = max(self._mtime_info, self._mtime_folder)
+        if ts == 0:
+            # timestamp unknown
+            logging.error(f"NO MODIFICATION TIMESTAMP FOR ASSET PACK: pack={slugify(self.name)}")
+            return datetime.datetime.now()
+
+        return datetime.datetime.fromtimestamp(ts)
+
     def get_worlds(self):
         return self.get_assets_by_type(AssetTypes.WORLD)
 
@@ -273,13 +322,13 @@ class ResourcePack(ResourcePackInfo):
 
         world_info = world_ar.load_json_file("world_info.json")
         name = world_info["world_name"]
-        map_ids = world_info["map_identifiers"]
+        map_ids = world_info["map_names"]
         spell_names = world_info["spell_names"]  # ignore for now
         default_map = world_info["default_map"]
         print(f"found {len(map_ids)} world maps: world=" + name + ", maps=" + ", ".join(map_ids))
 
-        all_maps_by_id = [ma.load_map() for ma in self.get_assets_by_type(AssetTypes.MAP).values()]
-        all_maps_by_id = {m.map_identifier: m for m in all_maps_by_id}
+        all_maps_by_id = [ma.load_map(new_name=ma.name) for ma in self.get_assets_by_type(AssetTypes.MAP).values()]
+        all_maps_by_id = {m.name: m for m in all_maps_by_id}
         maps = [all_maps_by_id[q] for q in map_ids]
 
         world = World(name, maps, [], default_map=default_map)

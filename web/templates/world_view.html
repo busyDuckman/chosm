@@ -5,6 +5,7 @@
         <meta charset="UTF-8">
         <title>Title</title>
         <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='gui/overlay.css') }}"/>
+
     </head>
     <body>
     {%  include 'login_overlay.html' %}
@@ -13,21 +14,13 @@
     <script type="text/javascript">
     openNav();
     </script>
-
-
-
     </body>
     </html>
 
 {% else %}
-
+    {% set map = current_map %}
     {% set sky_sprite = "sprite-sky-sky-flat" %}
-    {#{% set sky_class = "anim_"+sky_sprite + '_' + "static_image" %}#}
-
-{#    {% set sky_class = pack[sky_sprite].animations["idle"]["class"] %}#}
     {% set sky_class = pack[sky_sprite].idle_animation["class"] %}
-
-    {% set  %}
     {% set sky_class = pack[sky_sprite].idle_animation["class"] %}
 
     <!DOCTYPE html>
@@ -37,70 +30,106 @@
         <title>Title</title>
         <link href="{{ url_for('get_file', pack_name=pack_name, asset_slug=sky_sprite, file_name="_animation.css") }}"
               rel="stylesheet">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('resource_pack_css_download', pack_name=pack_name, map_name=map.name) }}"/>
 
         <style>
             .view {
                 border: solid black 1px;
             }
 
-            .sky {
-                background-image: url('{{ url_for('get_file', pack_name=pack_name, asset_slug=sky_sprite, file_name="frame_00.png")  }}');
-                {#background-color: blue;#}
-                background-repeat: no-repeat;
-                {#background-position: center;#}
-                {#background-size: cover;#}
-                background-size: 100% 100%;
-                {#height: 100px;#}
-                {#width: 100%;#}
-                {#height: auto;#}
-                {#width: auto;#}
-                {#background-repeat: no-repeat, repeat-x;#}
-                {#position: absolute#}
-                {#border: 2px solid red;#}
-            }
-
-            .fog {
-                background: linear-gradient(rgba(255,255,255,0) 75%, rgba(255,255,255,0.5) 100%);
-            }
-            .ground {
-                {#background-image: url('/assets/environment/ground_desert.jpg');#}
-                {#background-image:#}
-
-                {#background-image: url('{{ url_for('get_file', ) }}')#}
-                background-size: 100% 100%;
-                background-repeat: no-repeat;
-                width: 100%;
-                height: 100%;
-                position: absolute;
-                transform: scale(1);
-            }
-
             .fill {
                 background-repeat: no-repeat;
                 background-size: 100% 100%;
-                {#border: 2px solid red;#}
+                -webkit-mask-size: 100% 100%;
+                mask-size: 100% 100%;
             }
-
         </style>
     </head>
     <body>
 
-    {#<div class='{{ sky_class }}'></div>#}
-    {#<div class='sky'></div>#}
-    {#<div class='sky' style="height: 200px; width: 400px;"></div>#}
-{#    {{ sky_class }}#}
     <div class='view' style="background: #333333; width: 96%; height: 96%; position: absolute; left: 2%; top: 2%">
       <div style="position: absolute; z-index: 1; width: 100%; height: 100%">
         <div class='{{ sky_class }} fill' style="height: 50%; width: 100%;"></div>
     {#    <div class='sky' style="height: 45%; width: 100%;"></div>#}
-        <div class='ground' style="height: 50%; width: 100%;"></div>
+{#          {% for step_f, step_r, gnd_class in ground_render_list %}#}
+{#            <div class='{{ gnd_class }} fill' style="top: 50%; height: 50%; width: 100%;"></div>#}
+{#          {% endfor %}#}
+
+            {% for steps_f, steps_r, ground_class in ground_render_list %}
+                {% set mask_img_url = url_for('ground_mask', steps_fwd=steps_f, steps_right=steps_r) %}
+                <div class='{{  ground_class  }} fill'
+                     style="top: 50%; height: 50%; width: 100%;
+                             -webkit-mask-image: url({{ mask_img_url }});
+                             mask-image: url({{ mask_img_url }});
+                             mask-mode: alpha">
+                </div>
+            {% endfor %}
+
+            {% for bottom_per, left_per, scale, env_class in env_render_list %}
+                <div class='{{ env_class }} fill'
+                     style="position: absolute;
+                             bottom: {{ 100 - bottom_per * 100 }}%;
+                             left: {{ left_per * 100 }}%;
+                             height: {{ 100 * scale }}%;
+                             width: {{ 100 * scale }}%;">
+
+                </div>
+
+            {% endfor %}
+
+{#          <div class='{{ map_lut["env"][4] }} fill'#}
+{#                     style="top: 0%; height: 25%; width: 25%;">#}
+{#          </div>#}
+
+          <div style="position: absolute; top: 1%; left: 85%">
+              Pos = ({{ game_state.party.pos_x }}, {{ game_state.party.pos_y }}), direction = {{ game_state.party.facing | string() }}
+              <br>
+              {{ env_render_list }}
+          </div>
+
       </div>
     </div>
 
 
+    <script>
+      document.addEventListener("keydown", event => {
+          let party_action = "NA";
+          switch (event.key) {
+              case "ArrowUp":
+                  party_action = "MOVE_FWD"
+                  break;
+              case "ArrowDown":
+                  party_action = "MOVE_BACK"
+                  break;
+              case "ArrowLeft":
+                  party_action = "TURN_LEFT"
+                  break;
+              case "ArrowRight":
+                  party_action = "TURN_RIGHT"
+                  break;
+          }
 
+          if (party_action != "NA") {
+
+              fetch("/do_action", {
+                  method: "POST",
+                  headers: {"Content-Type": "application/json"},
+                  body: JSON.stringify({"action": party_action})
+              });
+              location.reload();
+          }
+      });
+    </script>
 
     </body>
     </html>
 
 {% endif %}
+
+
+{#<div class='{{  map_lut["ground"][1]  }} fill'#}
+{#                     style="top: 50%; height: 50%; width: 100%;#}
+{#                             -webkit-mask-image: url({{ mask_img_url }});#}
+{#                             mask-image: url({{ mask_img_url }});#}
+{#                             mask-mode: alpha">#}
+{#                </div>#}

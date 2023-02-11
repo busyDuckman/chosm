@@ -31,7 +31,8 @@ class MapAsset(Asset):
         self.luts_by_name = luts
 
         # create the datatable that the server will use
-        asset_record_luts = [AssetLut(name, {i: q.slug for i, q in lut.items()}) for name, lut in luts.items()]
+        asset_record_luts = [AssetLut(name, {i: q.slug if q is not None else None
+                                             for i, q in lut.items()}) for name, lut in luts.items()]
         self.game_map.set_luts(asset_record_luts)
 
     def __str__(self):
