@@ -9,10 +9,11 @@ def intersection(tp_line_a, tp_line_b):
     a = Line(*tp_line_a)
     b = Line(*tp_line_b)
     q = a.intersection(b)[0]
-    return (q.x, q.y)
+    # without the float(...), this returns sympy.core.numbers.something
+    return float(q.x), float(q.y)
 
 
-class SingleVanishingPointPainting():
+class SingleVanishingPointPainting:
     def __init__(self, ground_images: List[Image.Image], sky_images: List[Image.Image],
                  view_dist=5,
                  size=None, horizon_screen_ratio=0.5, local_tile_ratio=0.9, bird_eye_vs_worm_eye=0):
@@ -28,6 +29,18 @@ class SingleVanishingPointPainting():
         self.local_tile_ratio = local_tile_ratio
         self.bird_eye_vs_worm_eye = bird_eye_vs_worm_eye
         self.view_dist: int = view_dist
+
+        # how many steps away from the center line are tiles visible
+        self.fov_table = [0] * self.view_dist
+        for step_f in range(self.view_dist):
+            step_r = 0
+            while True:
+                mask = self.draw_mask(step_f, step_r, threshold=0)
+                if mask is None:
+                    break
+                self.fov_table[step_f] = step_r
+                step_r += 1
+
 
     def get_vp(self):
         horizon_y = int(self.horizon_screen_ratio * self.height)
@@ -53,9 +66,10 @@ class SingleVanishingPointPainting():
         else:
             return (vp, (x_middle - (local_tile_size * (2 ** n - 1)), self.height))
 
+    @lru_cache()
     def get_tile_polygon(self, steps_fwd, steps_right):
         if steps_right == 0:
-            # stradele the centre line
+            # straddle the centre line
             p_line_1 = self.get_p_line(1, True)
             p_line_2 = self.get_p_line(1, False)
         else:

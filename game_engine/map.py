@@ -26,8 +26,13 @@ class AssetLut(Mapping):
       - The goal is not to index via sprite frame number style lookups (everything is a sprite mantra).
         - TODO: the tile based mini-map still does this.
     """
-    def __init__(self, name, mapping: Dict[Any, str]):
+    def __init__(self, name, mapping: Dict[Any, str], auto_parse_integers=False):
         self.name = slugify(name)  # also the name of the layer
+        if auto_parse_integers:
+            try:
+                mapping = {int(k): v for k, v in mapping.items()}
+            except ValueError:
+                pass
         self.mapping = mapping
 
     def __getitem__(self, key: Any) -> str:
@@ -39,26 +44,20 @@ class AssetLut(Mapping):
     def __iter__(self) -> Iterator:
         return self.mapping.__iter__()
 
+    def __str__(self):
+        return ", ".join([f"{k}: {v}" for k, v in list(self.items())[:3]]) + "..."
 
-class Map:
+
+class MapABC:
     """
-    This class is an immutable collection of layers representing a grid based world in its initial state.
-
-    Another class: MapInstance, handles the "game state" or changes the player makes to the world defined
-    in this class.
-
-    Notes:
-      - This class uses ArchetypedTable to store the world in a memory efficient manner.
-      - This class is intended to be memory resident in a running game server.
-      - Every session has one instance of the MapInstance class. Multiple instances of
-        the MapInstance class can reference the same instance of a Map class.
+    The interface to a World Map, but without any specified storage.
     """
-    def __init__(self, map_identifier, w, h,
+    def __init__(self, name, w, h,
                  layer_names: List[str],
                  luts: List[AssetLut]):
         """
         Creates a new game map
-        :param map_identifier: map name
+        :param name: map name
         :param w: Map width
         :param h: Map height
         :param layer_names: Layer names
@@ -67,33 +66,21 @@ class Map:
         if layer_names is None or len(layer_names) == 0:
             raise ValueError("numer of layers must be > 0")
 
-        self.map_identifier = str(map_identifier)
+        self.name = str(name)
         self.num_layers = len(layer_names)
         self.width: int = w
         self.height: int = h
         self.layer_names = tuple([slugify(q) for q in layer_names])
         self.luts: List[AssetLut] = luts
         self.luts_by_name: Dict[str: AssetLut] = {q.name: q for q in luts}
-        self._map: DifferenceTable = ArchetypedTable({n: 0 for n in self.layer_names}, self.width * self.height)
+        self._map: DifferenceTable = None
 
     def set_luts(self, luts: List[AssetLut]):
         self.luts = luts
         self.luts_by_name = {q.name: q for q in luts}
 
-    def recompress_map(self):
-        self._map = ArchetypedTable(self._map, lru_cache_size=self._map.lru_cache_size)
-
     def size(self):
         return self.width, self.height
-
-    # @property
-    # def layer_names(self):
-    #     return copy.copy(self._layer_names)
-    #
-    # @layer_names.setter
-    # def layer_names(self, value):
-    #     self._layer_names = value
-    #     self._layer_lut = {n: i for i, n in enumerate(self._layer_names)}
 
     def __getitem__(self, pos):
         if len(pos) == 2:
@@ -122,6 +109,31 @@ class Map:
     def __len__(self):
         return self.width * self.height
 
+
+class Map(MapABC):
+    """
+    This class is an immutable collection of layers representing a grid based world in its initial state.
+
+    Another class: MapInstance, handles the "game state" or changes the player makes to the world defined
+    in this class.
+
+    Notes:
+      - This class uses ArchetypedTable to store the world in a memory efficient manner.
+      - This class is intended to be memory resident in a running game server.
+      - Every session has one instance of the MapInstance class. Multiple instances of
+        the MapInstance class can reference the same instance of a Map class.
+    """
+
+    def __init__(self, name,
+                 w, h,
+                 layer_names: List[str],
+                 luts: List[AssetLut]):
+        super().__init__(name, w, h, layer_names, luts)
+        self._map: DifferenceTable = ArchetypedTable({n: 0 for n in self.layer_names}, self.width * self.height)
+
+    def recompress_map(self):
+        self._map = ArchetypedTable(self._map, lru_cache_size=self._map.lru_cache_size)
+
     def map_as_array_of_arrays(self):
         rows = []
         for row_idx in range(len(self._map)):
@@ -131,7 +143,7 @@ class Map:
         return rows
 
     def asdict(self):
-        d = {"map_identifier": self.map_identifier,
+        d = {"name": self.name,
              "width": self.width,
              "height": self.height,
              "layer_names": self._map.col_headings,  # to ensure layer_names is in the same order as the dumped table.
@@ -141,12 +153,13 @@ class Map:
         return d
 
 
-class MapInstance(Map):
+class MapInstance(MapABC):
     def __init__(self, base_map: Map):
-        super().__init__(base_map.map_identifier, base_map.width, base_map.height,
-                         base_map.num_layers, layer_names=base_map.layer_names)
+        super().__init__(base_map.name, base_map.width, base_map.height, base_map.layer_names,
+                         base_map.luts)
+
         # To save ram, this table only stores the differences of this instance vs. the reference map.
-        # If a lock is picked, or chest looted, the changes won't affect the master copy.
+        # If a door is opened, or chest looted, the changes won't affect the master copy.
         self._map = InstanceTable(base_map._map)
 
     def can_move_to(self, x: int, y: int, direction: Direction) -> Why:
@@ -159,16 +172,14 @@ class MapInstance(Map):
 
 
 
-
-
 def load_map_from_dict(d) -> Map:
     # note "map.json" is Map.asdict() with an extra "layer_sprites" key entered for sprite location.
-    map_id = d["map_identifier"]
+    map_id = d["name"]
     w = d["width"]
     h = d["height"]
     layer_names = d["layer_names"]
     map_tiles = d["map"]
-    luts = [AssetLut(**q) for q in d["luts"]]
+    luts = [AssetLut(**q, auto_parse_integers=True) for q in d["luts"]]
 
     # rectify to the format required
     map_tiles = [{h: c for h, c in zip(layer_names, row)} for row in map_tiles]

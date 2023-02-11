@@ -16,8 +16,8 @@ class World:
                  maps: List[Map],
                  spells: List[Spell],
                  default_map: str = None):
-        self._maps: Dict[str, Map] = {m.map_identifier: m for m in maps}
-        self.default_map = maps[0].map_identifier if default_map is None else default_map
+        self._maps: Dict[str, Map] = {m.name: m for m in maps}
+        self.default_map = maps[0].name if default_map is None else default_map
         self.spells: Dict[str, Spell] = {s.name: s for s in spells}
         self.world_name = world_name
 
@@ -27,7 +27,7 @@ class World:
 
         d = {
             "world_name": self.world_name,
-            "map_identifiers": map_names,
+            "map_names": map_names,
             "spell_names": spell_names,
             "default_map": self.default_map
         }
@@ -38,7 +38,7 @@ class World:
         return self._maps[self.default_map]
 
     def get_spawn_info(self):
-        return 8, 8, Direction.NORTH, self.get_default_map()
+        return 14, 52, Direction.NORTH, self.get_default_map()
 
 
 class WorldInstance(World):

@@ -1,39 +1,15 @@
 import io
 import logging
 from dataclasses import dataclass, asdict
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
+
+from slugify import slugify
 
 from chosm.map_asset import MapAsset
 from chosm.sprite_asset import SpriteAsset
 from game_engine.map import Map, AssetLut
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, spell_slug, RawFile, Direction
 import helpers.stream_helpers as sh
-
-def get_luts():
-    mm5_surface_lut = [
-        "WATER.SRF",  "DIRT.SRF",  "GRASS.SRF",   "SNOW.SRF",
-        "SWAMP.SRF",  "LAVA.SRF",  "DESERT.SRF",  "ROAD.SRF",
-        "DWATER.SRF", "TFLR.SRF",  "SKY.SRF",     "CLOUD.SRF",
-        "SEWER.SRF",  "CROAD.SRF", "SCORTCH.SRF", "SPACE.SRF"];
-
-    mm4_surface_lut = [
-        "WATER.SRF",  "DIRT.SRF", "GRASS.SRF",  "SNOW.SRF",
-        "SWAMP.SRF",  "LAVA.SRF", "DESERT.SRF", "ROAD.SRF",
-        "DWATER.SRF", "TFLR.SRF", "SKY.SRF",    "CLOUD.SRF",
-        "SPACE.SRF",  # "SEWER.SRF" not in the file   #TODO, there appears to be .SRF files I have not identified
-        "SPACE.SRF",  # "CROAD.SRF" not in the file   #TODO, there appears to be .SRF files I have not identified
-        "SCORTCH.SRF", "SPACE.SRF"]  # ok
-
-    env_lut = [
-        None,           "MOUNT.WAL",   "LTREE.WAL",     "DTREE.WAL",
-        "GRASS.WAL",    "SNOTREE.WAL",   "DSNOTREE.WAL", "SNOMNT.WAL",
-        "DEDLTREE.WAL",  None,  # "DMOUNT.WAL",
-                                         "LAVAMNT.WAL", "PALM.WAL",
-        "DMOUNT.WAL"]
-
-    return AssetLut("ground", dict(enumerate(mm5_surface_lut))), \
-           AssetLut("ground", dict(enumerate(mm4_surface_lut))), \
-           AssetLut("env", dict(enumerate(env_lut)))
 
 
 def read_map_meta_data(f, maze_data: RawFile):
@@ -98,11 +74,14 @@ def read_map_meta_data(f, maze_data: RawFile):
 
 
 class MAMMapAsset(MapAsset):
-    def __init__(self, file_id,
+    def __init__(self,
+                 file_id,
                  name,
                  game_map: Map,
                  joining_map_ids, restricted_spells,
                  can_rest, can_save, is_dark, is_outside):
+        assert (isinstance(file_id, int))
+        assert (isinstance(name, str))
         super().__init__(file_id, name, game_map)
         self.joining_map_ids = joining_map_ids
         self.restricted_spells = restricted_spells
@@ -180,14 +159,6 @@ def load_map_file(maze_data: RawFile,
     map_id = int("".join([c for c in maze_data.file_name if c.isdigit()]))
     total_tiles = map_width * map_height
 
-    mm5_surface_lut, mm4_surface_lut, env_lut = get_luts()
-    if ver == MAMVersion.CLOUDS:
-        surface_lut = mm4_surface_lut
-    elif ver == MAMVersion.DARKSIDE:
-        surface_lut = mm5_surface_lut
-    else:
-        raise MAMFileParseError(0, "", "Unsupported MAM version for maps")
-
     f = io.BytesIO(bytearray(maze_data.data))
     # from: https://xeen.fandom.com/wiki/MAZExxxx.DAT_File_Format
     # 512 bytes: WallData, 16x16 uint16 values comprising the visual map data (floors, walls, etc...)
@@ -204,7 +175,7 @@ def load_map_file(maze_data: RawFile,
     # the fields in the data class are the layer names we want.
     layers = list(MaMTile.__annotations__.keys())
 
-    the_map = Map(map_id, map_width, map_height, layers, [])
+    the_map = Map(str(map_id), map_width, map_height, layers, [])
 
     # create the map
     for y in range(map_height):
@@ -233,7 +204,6 @@ def load_map_file(maze_data: RawFile,
             #     env: int       # iTop
             #     building: int  # iOverlay
 
-
             building = map_top
             if map_top == 0 and map_overlay != 0:
                 building = map_overlay + 16
@@ -256,5 +226,9 @@ def load_map_file(maze_data: RawFile,
                         joining_map_ids, restricted_spells,
                         can_rest, can_save, is_dark, is_outside
                         )
+
+    map_file.tag(f"mapid_{map_id}")
+    # setup
+
     return map_file
 
