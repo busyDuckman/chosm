@@ -378,7 +378,7 @@ async def game_view(request: Request, session_id: Optional[str] = Cookie(default
     env_render_list = []
     svp = default_svp_composer
 
-    for step_f in range(svp.view_dist):
+    for step_f in reversed(range(svp.view_dist)):
         fov = svp.fov_table[step_f]
         for step_r in range(-fov, fov+1):
             tile = game_state.get_tile(step_f, step_r, None)
