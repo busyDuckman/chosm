@@ -66,7 +66,7 @@ async def startup_event():
     print("CWD: " + os.getcwd())
 
     default_svp_composer = SingleVanishingPointPainting([], [], size=(1920, 1024),  # not 1080, see rendering_layout.md
-                                                        view_dist=5,
+                                                        view_dist=6,
                                                         horizon_screen_ratio=0.5,
                                                         local_tile_ratio=0.9,
                                                         bird_eye_vs_worm_eye=0)
@@ -391,20 +391,20 @@ async def game_view(request: Request, session_id: Optional[str] = Cookie(default
                 env_idx = tile["env"]
                 env_class = map_lut["env"][env_idx]
                 if env_class is not None:
-                    a, b, c, d = svp.get_tile_polygon(step_f, step_r)
+                    b, a, c, d = svp.get_tile_polygon(step_f, step_r)
+                    # print(a, b, c, d)
                     # horizon = (svp.height * svp.horizon_screen_ratio)
-                    bottom_pix = (a[1] + c[1]) / 2
+                    # bottom_pix = (a[1] + c[1]) / 2
+                    bottom_pix = max(a[1], b[1], c[1], d[1])
                     bottom_per = bottom_pix / svp.height
 
-                    left_pix = (a[0] + b[0]) / 2
+                    left_pix = min(a[0], b[0])
                     left_per = left_pix / svp.width
 
                     # TODO: this is only a simplified scale taken ath the base of the polygon.
-                    scale = abs(b[0] - a[0]) / svp.width
-                    # print()
-                    # print(" bottom_per:", type(bottom_per), bottom_per)
-                    # print(" bottom_pix:", type(bottom_pix), bottom_pix)
-                    # print(" svp.height: ", type(svp.height), svp.height)
+                    # scale = abs(b[0] - a[0]) / svp.width
+                    # scale = abs(b[0] - a[0]) / svp.width
+                    scale = svp.get_sprite_scale(step_f) * 1.3
 
                     env_render_list.append((bottom_per, left_per, scale, env_class))
 
