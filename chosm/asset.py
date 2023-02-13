@@ -31,6 +31,8 @@ from chosm.game_constants import AssetTypes
 
 class Asset(object):
     def __init__(self, file_id: int, name: str):
+        assert (isinstance(file_id, int))
+        assert (isinstance(name, str))
         self.file_id = file_id
         if name is None or len(name.strip()) == 0:
             name = f"FILEID_{self.file_id}"
@@ -38,6 +40,11 @@ class Asset(object):
         self.slug = slugify(f"{self.get_type_name()}_{self.name}")
         self.created_timestamp = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
         self.tags: List[str] = []
+
+    def change_name(self, name: str):
+        assert (isinstance(name, str))
+        self.name: str = name
+        self.slug = slugify(f"{self.get_type_name()}_{self.name}")
 
     def __str__(self):
         return f"Asset: id={self.file_id}"

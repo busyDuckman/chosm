@@ -4,7 +4,7 @@ import logging
 import os.path
 import pathlib
 from os.path import split, join, isfile
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Union
 
 from slugify import slugify
 
@@ -58,8 +58,8 @@ class DynamicFileManager:
     """
     def __init__(self, base_dir: str, expiration_time_stamp=None):
         self.base_dir = str(pathlib.Path(base_dir).absolute())
-        # eg: path, m_time = file_map["ground_tiles"]["blured"]["foo.png"]
-        self.file_map: Dict[Tuple, Tuple[str, int]] = {}
+        # eg: path, m_time = file_map[("ground_tiles", "blured", "foo.png")]
+        self.cached_file_info: Dict[Tuple, Tuple[str, int]] = {}
 
         if expiration_time_stamp is not None:
             self.expiration_time = expiration_time_stamp
@@ -80,34 +80,64 @@ class DynamicFileManager:
                 m_time = int(os.stat(filename).st_mtime)
                 file_map[parts] = (filename, m_time)
 
-        self.file_map = file_map
+        self.cached_file_info = file_map
 
-    def query(self, categories: List[str], file_name: str):
+    def query(self, categories: List[str],
+              file_name: str,
+              expiration_time: Union[datetime.datetime, float] = None):
         """
         Queries if a valid (non-expired) files exists.
         If it does not, the required folder structure is created.
         """
-        parts = [slugify(c) for c in categories]
-        parts.append(file_name)
+        cat_parts = [slugify(c) for c in categories]
+        parts = cat_parts + [file_name]
+        parts = tuple(parts)
 
-        # do we have cached metadata
-        if parts in self.file_map:
-            # file exists, check modification time to see if it is expired
-            path, m_time = self.file_map[parts]
-            return path, m_time > self.expiration_time
-
-        # file metadata does not exist in cache, was it newly created
-        dest_dir = join(self.base_dir, *[slugify(c) for c in categories])
+        dest_dir = join(self.base_dir, *cat_parts)
         dest_file = join(dest_dir, file_name)
 
+        # print("dest_dir:", dest_dir)
+        # print("dest_file:", dest_file)
+
+        # For debug server, skip the cache, as the file may have been deleted, probably by a dev forcing a refresh
+        if not os.path.isfile(dest_file):
+            os.makedirs(dest_dir, exist_ok=True)
+            return dest_file, False
+
+        # find the applicable expiration time as a integer timestamp
+        if expiration_time is None:
+            expiration_time = self.expiration_time
+        elif isinstance(expiration_time, datetime.datetime):
+            expiration_time = int(expiration_time.timestamp())
+        elif isinstance(expiration_time, float):
+            expiration_time = int(expiration_time)
+
+        # do we have cached metadata
+        if parts in self.cached_file_info:
+            # file exists, check modification time to see if it is expired
+            path, m_time = self.cached_file_info[parts]
+            m_time = int(m_time)
+            valid = m_time > expiration_time
+            # TODO: if this is not valid, we may want to drop the cached info and see if it was updated.
+            # print("m_time > expiration_time", m_time, expiration_time, m_time > expiration_time)
+            return path, valid
+
+        # file metadata does not exist in cache, was it newly created
         if os.path.isfile(dest_file):
             m_time = int(os.stat(dest_file).st_mtime)
-            self.file_map[parts] = (dest_file, m_time)  # update cached metadata
-            return dest_file, m_time > self.expiration_time
+            self.cached_file_info[parts] = (dest_file, m_time)  # update cached metadata
+            return dest_file, m_time > expiration_time
 
         # file does not exist, make sure it's folder does before exiting.
         os.makedirs(dest_dir, exist_ok=True)
         return dest_file, False
+
+    def invalidate_cache(self, categories: List[str], file_name: str):
+        parts = [slugify(c) for c in categories]
+        parts.append(file_name)
+        parts = tuple(parts)
+        if parts in self.cached_file_info:
+            del self.cached_file_info[parts]
 
 
 def main():

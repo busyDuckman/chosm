@@ -92,6 +92,9 @@ class Direction(Enum):
     SOUTH = 2
     WEST  = 3
 
+    def __str__(self):
+        return self.name.lower()
+
     def other_way(self):
         return Direction((self.value+2) % 4)
 
@@ -104,7 +107,14 @@ class Direction(Enum):
     def as_vec(self):
         return [(0, 1), (1, 0), (0, -1), (-1, 0)][self.value]
 
-    def apply(self, x: int, y: int) -> Tuple[int, int]:
+    def walk_from(self, from_x: int, from_y: int, n_steps=1) -> Tuple[int, int]:
+        """
+        Moves some step(s) in the current direction
+        :param from_x: start x 
+        :param from_y: start y 
+        """
         vec = self.as_vec()
-        return x+vec[0], y+vec[1]
+        return from_x + (vec[0] * n_steps), from_y + (vec[1] * n_steps)
+
+
 

@@ -43,10 +43,13 @@ class SpriteRoles(Enum):
 
     GROUND                 = 30
     WATER                  = 31
-    GROUND_DECAL           = 32  # eg: drawing something on top of the ground
-    GROUND_PIT             = 33
-    GROUND_TRAPDOOR        = 34
+    GROUND_SURFACE         = 32  # eg a path or something rendered above the ground
+    GROUND_DECAL           = 33  # eg: drawing something on top of the ground & surface, eg: footprints
+    GROUND_PIT             = 34
+    GROUND_TRAPDOOR        = 35
     GROUND_TRAP            = 36
+
+    ENVIRONMENT_ITEM       = 40
 
     def __str__(self):
         return self.name.lower()
