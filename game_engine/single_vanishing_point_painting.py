@@ -31,7 +31,7 @@ class SingleVanishingPointPainting:
         self.view_dist: int = view_dist
 
         # how many steps away from the center line are tiles visible
-        self.fov_table = [0] * self.view_dist
+        self.fov_table = [0] * (self.view_dist + 1)
         for step_f in range(self.view_dist):
             step_r = 0
             while True:
@@ -48,26 +48,41 @@ class SingleVanishingPointPainting:
         return (gnd_w / 2, horizon_y - (self.bird_eye_vs_worm_eye * gnd_h))
 
     def get_h_line(self, n):
+        """
+        Returns the horizontal lines.
+        :param n: How many tiles forward.
+        :return: A line as two points ((x1, y1), (x2, y2))
+        """
         horizon_y = int(self.horizon_screen_ratio * self.height)
         gnd_w, gnd_h = self.width, self.height - horizon_y
         depth = 0
         for i in range(n):
             depth += gnd_h / (2 ** (i + 1))
-        return ((0, self.height - depth), (gnd_w, self.height - depth))
+        return (0, self.height - depth), (gnd_w, self.height - depth)
 
     def get_p_line(self, n, right):
+        """
+        The line running from the base to the vanishing point.
+        :param n: How many tiles across.
+        :param right: True for the lines right of center, False for the lines left of center.
+        :return: A line as two points ((x1, y1), (x2, y2))
+        """
         vp = self.get_vp()
         horizon_y = int(self.horizon_screen_ratio * self.height)
         gnd_w, gnd_h = self.width, self.height - horizon_y
         local_tile_size = (gnd_w * self.local_tile_ratio) / 2
         x_middle = self.width / 2
         if right:
-            return (vp, (x_middle + (local_tile_size * (2 ** n - 1)), self.height))
+            p2 = (x_middle + (local_tile_size * (2 ** n - 1)), self.height)
         else:
-            return (vp, (x_middle - (local_tile_size * (2 ** n - 1)), self.height))
+            p2 = (x_middle - (local_tile_size * (2 ** n - 1)), self.height)
+
+        return vp, p2
 
     @lru_cache()
     def get_tile_polygon(self, steps_fwd, steps_right):
+        # TODO: This takes a unexpectedly long time to compute, I may need to change intersection library.
+        #       For now, as there are only a few possible calls, the output is memoized.
         if steps_right == 0:
             # straddle the centre line
             p_line_1 = self.get_p_line(1, True)
@@ -86,7 +101,27 @@ class SingleVanishingPointPainting:
         d = intersection(p_line_1, h_line_2)
         return [a, b, c, d]
 
+    def get_sprite_scale(self, steps_fwd: float) -> float:
+        """
+        Gets the sprite scale for a sprite according to its distance.
+        :param steps_fwd: eg: For the middle of a tile2 steps forward use 2.5
+        :return: A scale, assuming 100% to mean the sprite is directly in front of the camera.
+        """
+        local_tile_size = (self.width * self.local_tile_ratio) / 2
+        vp_dist = self.get_vp()[1]
+
+        # TODO: I have to thing about getting this right, the movable vanishing point complicates things.
+
+        # for now
+        return 1 / 2 ** steps_fwd
+
+
     def compose(self) -> Image.Image:
+        """
+        This is a helper to draw the image.
+        used for debug/investigation purposes only.
+        :return:
+        """
         # screen space
         horizon_y = int(self.horizon_screen_ratio * self.height)
 
