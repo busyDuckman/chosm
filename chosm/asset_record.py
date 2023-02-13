@@ -11,6 +11,7 @@ from chosm.game_constants import AssetTypes, parse_asset_type
 from game_engine.map import load_map_from_dict, Map
 from helpers.why import Why
 
+import weakref
 
 # AssetRecord:
 #   - built for use by the web server
@@ -63,6 +64,8 @@ class AssetRecord(collections.abc.Mapping):
 
         self.animations: Dict[str, Dict[str, Any]] = {}
         self.idle_animation: Dict[str, Any] = None
+
+        self._the_map_ref: weakref.ref = None
 
         self._refresh_lock = Lock()
 
@@ -122,6 +125,8 @@ class AssetRecord(collections.abc.Mapping):
             return Why.false("slug in info.json was different to folder name.")
         if self.slug.startswith("-"):
             return Why.false("slug starts with a '-'.")
+        if not isinstance(self.name, str):
+            return Why.false("Name was not a string.")
         if len(self.name.strip()) == 0:
             return Why.false("Name can not be blank.")
         return Why.true()
@@ -218,10 +223,28 @@ class AssetRecord(collections.abc.Mapping):
     def load_asset(self) -> Asset:
         return NotImplemented
 
-    def load_map(self) -> Map:
+    def load_map(self, new_name: str = None) -> Map:
+        """
+        Loads a map, or returns a cached copy.
+        Uses a week reference, so the map if not loaded separately for multiple sessions
+        or kept in memory unnecessarily if no sessions are using the map.
+        :return:
+        """
+        # will be none if map has not been loaded yet
+        if self._the_map_ref is not None:
+            the_map = self._the_map_ref()
+            if the_map is not None:
+                logging.info("Using cached map: asset = " + self.slug)
+                return the_map
+
+        # no existing copy of the map
         logging.info("loading map: asset = " + self.slug)
         d = self.load_json_file("map.json")
         the_map = load_map_from_dict(d)
+        if new_name is not None:
+            the_map.name = str(new_name)
+        self._the_map_ref = weakref.ref(the_map)
+
         return the_map
 
 

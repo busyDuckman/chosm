@@ -1,8 +1,5 @@
-
-{# "map.json" is Map.asdict() with an extra "layer_sprites" key entered for sprite location.#}
-{# So we will load both the map opject, and the sprites record. #}
 {% set map = pack[asset_slug].load_map() %}
-{% set layers = pack[asset_slug].load_json_file("map.json")["layer_sprites"] %}
+{% set map_name = pack[asset_slug].name %}
 
 {% set width  = map.width %}
 {% set height = map.height %}
@@ -12,57 +9,77 @@
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='general.css') }}"/>
-
-    {% for layer_name in layers.keys() %}
-        {% set layer_sprite_name = layers[layer_name]["name"] %}
-        <link href="{{ url_for('get_file', pack_name=pack_name, asset_type="sprite", asset_name=layer_sprite_name, file_name="_animation.css") }}"
-{#        <link href="{{ url_for('get_file', pack_name=pack_name, asset_slug=layer_sprite_slug, file_name="_animation.css") }}"#}
-              rel="stylesheet">
-    {% endfor %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('resource_pack_css_download', pack_name=pack_name, map_name=map_name) }}"/>
+    <style>
+        .item_label {
+            width: 100px;
+            display: inline-block;
+            text-align: right;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body class="window_bg">
 
-{#<div class="sub_window_border">#}
-{#    <div class="window_title">#}
-{#    Map Tile Data "Name" ({{ width }} x {{ height }})#}
-{#    </div>#}
-{#    <div style="overflow: scroll; height: 400px">#}
-{#        <table cellspacing="0" style="text-align: center; font-size: 12px">#}
-{#                {% for y in range(height) %}#}
-{#                    <tr style="height: 28px">#}
-{#                        {% for x in range(width) %}#}
-{#                            {% set pos = x + y * width %}#}
-{#                            <td style="border: 1px solid">#}
-{#                                {% set idx_ground = tiles[pos]["idx_ground"] %}#}
-{#                                {% set idx_object = tiles[pos]["idx_object"] %}#}
-{#                                {% set idx_map_tile = tiles[pos]["idx_map_tile"] %}#}
-{#                                {% set idx_map_icon = tiles[pos]["idx_map_icon"] %}#}
-{#                                {{ idx_ground }}, {{ idx_object }}<br>#}
-{#                                {{ idx_map_tile }}, {{ idx_map_icon }}#}
-{#                            </td>#}
-{#                        {% endfor %}#}
-{#                    </tr>#}
-{#                {% endfor %}#}
-{#            </table>#}
-{#    </div>#}
-{#</div>#}
+<div class="sub_window_border">
+    <div class="window_title">
+    Layers
+    </div>
+    <div style="overflow: scroll; overflow-x: hidden; height: 150px">
+        {% for layer_name in map.layer_names %}
+            {% set tile_name = layer_name + "-map" %}
+
+            <span class="item_label">{{ layer_name }}:</span>
+
+            {%  if layer_name in ["height", "ground", "surface", "wall", "env", "building"] %}
+                <i style="color: #404040">( Chosm render layer )</i>
+            {%  else  %}
+                <i style="color: #404040">( data layer )</i>
+            {% endif %}
+
+            {% if tile_name in map.luts_by_name %}
+                <i style="color: #404040">( has 2d map tiles )</i>
+            {% endif %}
+
+            <br>
+        {% endfor %}
+    </div>
+</div>
 
 <div class="sub_window_border">
     <div class="window_title">
-    Tile set
+    Look up tables
     </div>
-    {% for layer_name, sprite_info in layers.items() %}
-        {% set sprite_name = sprite_info["name"] %}
-        {% set sprite_slug = sprite_info["slug"] %}
-        {% set sprite_sheet_url = url_for('get_file', pack_name=pack_name, asset_slug=sprite_slug, file_name="_sprite_sheet.png") %}
+    {% for lut in map.luts %}
+        <b>{{ lut.name }}</b> <br/>
+        <table>
+        <tr>
+            {% for key in lut.keys() %}
+                {% set slug = lut[key] %}
+                {% if slug != none %}
+                    {% set w = pack[slug].width %}
+                    {% set h = pack[slug].height %}
+                    {% set ratio = h / w %}
+                    {% set h2 = ratio * 32 %}
+                    {% set class_name = pack[slug].idle_animation['class'] %}
 
-        <b>{{ layer_name }}:</b>&nbsp;&nbsp;&nbsp;&nbsp;<i style="color: #404040">({{ sprite_name }})</i>
-        <div style="overflow: scroll">
-            <img src="{{ sprite_sheet_url }}" style="height: 32px; width:auto">
-        </div>
-        <br>
+    {#                {% set sprite_url = url_for('get_file', pack_name=pack_name, asset_slug=slug, file_name="frame_00.png") %}#}
+    {#                <td class="sprite_td" style="background-image: url('{{ sprite_url }}'); width: 32px; height: {{ h2 }}px;">#}
+    {#                        {{ key }}#}
+    {#                </td>#}
+
+                    <td class="{{ class_name }}" style="width: 32px; height: {{ h2 }}px;
+                            position: unset; text-shadow: 0px 0px 2px white, -1px -1px 2px white;
+                            background-size: 100% 100%; text-align: center;">
+                            {{ key }}
+                    </td>
+                {% endif %}
+            {% endfor %}
+        </tr>
+        </table>
     {% endfor %}
 </div>
+
 
 <div class="sub_window_border">
     <div class="window_title">
@@ -72,23 +89,37 @@
     {% set tile_size = 8 * tile_scale %}
     <div style="overflow: scroll; height: 400px">
         <div style="position: relative; width: {{ width * tile_size }}px; height: {{ width * tile_size }}px">
-            {% for y in range(height) %}
-                {% for x in range(width) %}
-                    {%  for layer_name in ["ground", "env", "building"] %}
-                        {% set tile_idx = map[x, y, layer_name] %}
-                        {% set tile_class = "image_"+layers[layer_name]["slug"]+"_frame_"+("%04d" % tile_idx) %}
+            {%  for layer_name in ["ground", "env", "building"] %}
+                {% set tile_lut_name = layer_name + "-map" %}
+                {% if tile_lut_name in map.luts_by_name %}
+                    {% set lut = map.luts_by_name[tile_lut_name] %}
+                    {% for y in range(height) %}
+                        {% for x in range(width) %}
+                            {% set tile_idx = map[x, y, layer_name] %}
+                            {% set tile_slug = lut[tile_idx] %}
 
-                        {% if layer_name == ground or tile_idx != 0 %}
-                            <div class='{{ tile_class }}'
-                                 style="scale: {{ tile_scale }}; position: absolute; left: {{ x*tile_size + 16 }}px; top: {{ y*tile_size + 16 }}px"
-                                 {% if loop.index == 0 %}
-                                    title="{{ idx_ground }}, {{ idx_object }}, {{ idx_map_tile }}, {{ idx_map_icon }}"
-                                 {% endif %}
-                            >
-                            </div>
-                        {% endif %}
-                    {%  endfor %}
-                {% endfor %}
+                            {% if tile_slug != none %}
+                                {% set class_name = pack[tile_slug].idle_animation['class'] %}
+
+                                <div class='{{ class_name }}'
+                                     style="scale: {{ tile_scale }}; position: absolute;
+                                             left: {{ x*tile_size + 16 }}px; top: {{ y*tile_size + 16 }}px">
+                                </div>
+                            {% endif %}
+
+{##}
+{#                        {% if layer_name == ground or tile_idx != 0 %}#}
+{#                            <div class='{{ tile_class }}'#}
+{#                                 style="scale: {{ tile_scale }}; position: absolute; left: {{ x*tile_size + 16 }}px; top: {{ y*tile_size + 16 }}px"#}
+{#                                 {% if loop.index == 0 %}#}
+{#                                    title="{{ idx_ground }}, {{ idx_object }}, {{ idx_map_tile }}, {{ idx_map_icon }}"#}
+{#                                 {% endif %}#}
+{#                            >#}
+{#                            </div>#}
+{#                        {% endif %}#}
+                        {%  endfor %}
+                    {% endfor %}
+                {% endif %}
             {% endfor %}
         </div>
     </div>

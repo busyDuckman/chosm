@@ -8,7 +8,7 @@ import shutil
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import NamedTuple, Dict, List, Tuple, Literal, Iterator, Type
+from typing import NamedTuple, Dict, List, Tuple, Literal, Iterator, Type, Any
 import logging
 import os
 import time
@@ -24,12 +24,13 @@ from chosm.map_asset import MapAsset
 from chosm.resource_pack import ResourcePackInfo
 from chosm.sprite_asset import SpriteAsset
 from chosm.world_asset import WorldAsset
+from game_engine.map import AssetLut
 from game_engine.world import World
 from mam_game.binary_file import load_bin_file
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, normalise_file_name
 from mam_game.mam_sprite_alignments import flatten_ground_sprite, flatten_sky_sprite
 from mam_game.map_organiser import combine_map_assets
-from mam_game.map_file_decoder import RawFile, load_map_file
+from mam_game.map_file_decoder import RawFile, load_map_file, MAMMapAsset
 from mam_game.npc_db_decoder import load_monster_database_file
 from mam_game.pal_file_decoder import load_pal_file, get_default_pal
 from chosm.pal_asset import PalAsset
@@ -129,7 +130,7 @@ class CCFile:
         return merged
 
 
-    def get_resources(self, res_type: Type, glob_epr: str = None):
+    def get_resources(self, res_type: Type, glob_epr: str = None) -> List[Asset]:
         res = [r for r in self._resources if isinstance(r, res_type)]
         if glob_epr is not None:
             res = [r for r in res if fnmatch.fnmatch(r.name, glob_epr)]
@@ -297,13 +298,13 @@ class CCFile:
         def_pal = get_default_pal(self.mam_version, self.mam_platform)
         self._resources.append(def_pal)
 
-        self._bootstrap_faces()
+        self._bootstrap_environment_sprites()
+        self._bootstrap_tiles()
         self._bootstrap_maps()
-        self.bootstrap_environment_sprites()
         self._bootstrap_monsters()
 
+        self._bootstrap_faces()
         self._bootstrap_worlds()
-
 
     def _bootstrap_faces(self):
         print(f"  - loading faces: ")
@@ -316,12 +317,13 @@ class CCFile:
             self._resources.append(sprite)
         print()
 
-
-    def bootstrap_environment_sprites(self):
+    def _bootstrap_environment_sprites(self):
         # graphics for the 3d view (environment ets)
         print(f"  - loading environment sprites: ")
-        for ext, role in zip(["sky", "gnd", "srf"],
-                             [SpriteRoles.SKY, SpriteRoles.GROUND, SpriteRoles.GROUND]):
+        for ext, role in zip(["sky", "gnd", "srf", "wal"],
+                             [SpriteRoles.SKY, SpriteRoles.GROUND,
+                              SpriteRoles.GROUND_DECAL, SpriteRoles.ENVIRONMENT_ITEM]):
+
             sprites = fnmatch.filter(self._toc_file_names, f"*.{ext}")
             print(f"  - {ext} ({len(sprites)}): ", end='')
             for f_name in sprites:
@@ -338,15 +340,20 @@ class CCFile:
 
                 sprite.tag(f"type_{ext}")
                 sprite.tag(f"environment_{environment_name}")
+                sprite.tag("environment")
+                sprite.tag(ext)
 
-                self._resources.append(sprite)
-
-                if ext == "srf":
+                if ext == "wal":
+                    simplified_sprite = sprite.copy_frames(1, new_name=sprite.name)
+                    self._resources.append(simplified_sprite)
+                elif ext == "srf":
                     sprite_flat = flatten_ground_sprite(sprite)
                     self._resources.append(sprite_flat)
                 elif ext == "sky":
                     sky_flat = flatten_sky_sprite(sprite)
                     self._resources.append(sky_flat)
+                else:
+                    self._resources.append(sprite)
             print()
         print()
 
@@ -354,7 +361,6 @@ class CCFile:
         # sprites += fnmatch.filter(self._toc_file_names, "*.gnd")
         # sprites += fnmatch.filter(self._toc_file_names, "*.fwl")
         # sprites += fnmatch.filter(self._toc_file_names, "*.swl")
-
 
     def _bootstrap_worlds(self):
         maps: List[MapAsset] = self.get_resources(MapAsset)
@@ -366,29 +372,16 @@ class CCFile:
         world_asset = WorldAsset(1, "main_world", world)
         self._resources.append(world_asset)
 
-    def _bootstrap_maps(self):
-        print(f"  - loading hud/misc graphics: ")
-        glob_list = ["*.til"]
-        image_names = [fnmatch.filter(self._toc_file_names, e) for e in glob_list]
-        image_names = np.array(image_names).flatten().tolist()
+    def _bootstrap_tiles(self):
+        # organise the tile graphics
+        print(f"  - loading tile graphics:  ")
+        image_names = fnmatch.filter(self._toc_file_names, "*.til")
+
         for f_name in image_names:
-            # print(f_name)
             pal = self.get_pal_for_file(f_name)
             raw = self._raw_data_lut[f_name]
             sprite = load_sprite_file(raw, pal, self.mam_version, self.mam_platform)
-            if "outdoor" not in f_name:
-                tile_set, tile_border = sprite.split(sprite.num_frames() - 1,
-                                                     left_name=sprite.name, right_name=sprite.name + "_border",
-                                                     left_id=sprite.file_id)
-                tile_set = tile_set.crop(0, 0, 10, 8, new_name=tile_set.name)  # trim out the icons
-                self._resources.append(tile_set)
-                self._resources.append(tile_border)
-
-                layer1, rest = tile_set.split(16, left_name=sprite.name + "_layer_00")
-                layer2, rest = rest.split(16, left_name=sprite.name + "_layer_01")
-                layer3, layer4 = rest.split(16, left_name=sprite.name + "_layer_02")
-
-            else:
+            if "outdoor" in f_name:
                 # outdoor.til handled a bit differently
                 sprite = sprite.crop(0, 0, 10, 8)
                 ground, rest = sprite.split(16, left_name="outdoor_tile_ground.til")
@@ -398,30 +391,154 @@ class CCFile:
                 self._resources.append(env)
                 self._resources.append(building)
 
+                for tile_set, lut_name in zip([ground, env, building], ["ground-map", "env-map", "building-map"]):
+                    # Every frame in tile_sprite is a map drawing sprite.
+                    for i in range(tile_set.num_frames()):
+                        name = f"{tile_set.name}_{i}"
+                        a_tile = tile_set.copy_frames(i, name, new_id=i)
+                        a_tile.tag(lut_name)
+                        a_tile.tag("tile")
+                        a_tile.tag("outdoor")
+                        self._resources.append(a_tile)
+
+            else:
+                tile_set, tile_border = sprite.split(sprite.num_frames() - 1,
+                                                     left_name=sprite.name, right_name=sprite.name + "_border",
+                                                     left_id=sprite.file_id)
+
+                # The sprite has empty space, with the icons in the top left.
+                tile_set: SpriteAsset = tile_set.crop(0, 0, 10, 8, new_name=tile_set.name)
+                # tile_set.tag("tile")
+                self._resources.append(tile_set)
+                self._resources.append(tile_border)
+                # layer1, rest = tile_set.split(16, left_name=sprite.name + "_layer_00")
+                # layer2, rest = rest.split(16, left_name=sprite.name + "_layer_01")
+                # layer3, layer4 = rest.split(16, left_name=sprite.name + "_layer_02")
+
+    def load_all_maps(self) -> List[MAMMapAsset]:
+        # organise the maps
         maps = fnmatch.filter(self._toc_file_names, "m*.dat")
         print([s for s in self._toc_file_names if '.dat' in s])
         print([s for s in self._toc_file_names if '.mob' in s])
         print(f"  - loading {len(maps)} maps: ", end="")
-        # tile_sets = ["cave.til", "cstl.til", "dung.til", "outdoor.til", "town.til",  "scfi.til",  "towr.til"]
-        tile_sets = self.get_resources(SpriteAsset, "*.til")
+
+        # load all maps
         map_assets = []
         for f_name in maps:
             print(f_name)
             raw_dat = self._raw_data_lut[f_name]
+
+            # load .evt and .mob isf possible
             mob_file_name = f_name.replace(".dat", ".mob")
             evt_file_name = f_name.replace(".dat", ".evt")
             if mob_file_name in self._raw_data_lut:
                 raw_mob = self._raw_data_lut[mob_file_name]
                 raw_evt = self._raw_data_lut[evt_file_name]
-                map_file = load_map_file(raw_dat, raw_mob, raw_evt, tile_sets, self.mam_version, self.mam_platform)
-                map_assets.append(map_file)
             else:
                 print("Expected a mob file: " + mob_file_name)
-                map_file = load_map_file(raw_dat, None, None, tile_sets, self.mam_version, self.mam_platform)
-                map_assets.append(map_file)
+                raw_mob = raw_evt = None
 
-        self._resources.extend(combine_map_assets(map_assets, self.mam_version, self.mam_platform))
-        print()
+            # load map
+            map_file = load_map_file(raw_dat, raw_mob, raw_evt, self.mam_version, self.mam_platform)
+            map_assets.append(map_file)
+
+        # join adjacent maps into larger maps
+        the_maps = combine_map_assets(map_assets, self.mam_version, self.mam_platform)
+
+        return the_maps
+
+    def resolve_tile_luts_for_map(self, the_map: MAMMapAsset) -> Dict[str, Dict[Any, SpriteAsset]]:
+        # TODO: for now we will just return the outdoor tile set regardless of the map in use.
+        # tile_sets = ["cave.til", "cstl.til", "dung.til", "outdoor.til", "town.til",  "scfi.til",  "towr.til"]
+
+        # find related sprites
+        tile_sprites = [q for q in self.get_resources(SpriteAsset)
+                        if "tile" in q.tags and "outdoor" in q.tags]
+
+        # just load the outdoor for now
+        luts_by_name: Dict[str, Dict[Any, SpriteAsset]] = {}
+        for lut_name in ["ground-map", "env-map", "building-map"]:
+            lut = {int(s.file_id): s for s in tile_sprites if lut_name in s.tags}
+            luts_by_name[lut_name] = lut
+
+        # patch out blank tiles (ie a number that means nothing is there)
+        luts_by_name["env-map"][0] = None
+        luts_by_name["building-map"][0] = None
+        if self.mam_version == MAMVersion.DARKSIDE:
+            luts_by_name["env-map"][15] = None
+
+        return luts_by_name
+
+    def get_known_outdoor_luts(self) -> Tuple[Dict[Any, SpriteAsset], Dict[Any, SpriteAsset]]:
+        mm5_surface_lut = [
+            "WATER.SRF", "DIRT.SRF", "GRASS.SRF", "SNOW.SRF",
+            "SWAMP.SRF", "LAVA.SRF", "DESERT.SRF", "ROAD.SRF",
+            "DWATER.SRF", "TFLR.SRF", "SKY.SRF", "CLOUD.SRF",
+            "SEWER.SRF", "CROAD.SRF", "SCORTCH.SRF", "SPACE.SRF"];
+
+        mm4_surface_lut = [
+            "WATER.SRF", "DIRT.SRF", "GRASS.SRF", "SNOW.SRF",
+            "SWAMP.SRF", "LAVA.SRF", "DESERT.SRF", "ROAD.SRF",
+            "DWATER.SRF", "TFLR.SRF", "SKY.SRF", "CLOUD.SRF",
+            "SPACE.SRF",  # "SEWER.SRF" not in the file   #TODO, there appears to be .SRF files I have not identified
+            "SPACE.SRF",  # "CROAD.SRF" not in the file   #TODO, there appears to be .SRF files I have not identified
+            "SCORTCH.SRF", "SPACE.SRF"]  # ok
+
+        env_lut = [
+            None, "MOUNT.WAL", "LTREE.WAL", "DTREE.WAL",
+            "GRASS.WAL", "SNOTREE.WAL", "DSNOTREE.WAL", "SNOMNT.WAL",
+            "DEDLTREE.WAL", None,  # "DMOUNT.WAL",
+            "LAVAMNT.WAL", "PALM.WAL",
+            "DMOUNT.WAL"]
+
+        if self.mam_version == MAMVersion.CLOUDS:
+            surface_lut = mm4_surface_lut
+        elif self.mam_version == MAMVersion.DARKSIDE:
+            surface_lut = mm5_surface_lut
+        else:
+            raise MAMFileParseError(0, "", "Unsupported MAM version for maps")
+
+        # map to the actual sprite name in the resource pack
+        surface_lut = [s.lower() + "_flat" if s is not None else None
+                       for s in surface_lut]
+
+        env_lut = [s.lower() if s is not None else None
+                   for s in env_lut]
+
+        surface_lut = [self.get_resource(SpriteAsset, n) if n is not None else None
+                       for n in surface_lut]
+        env_lut = [self.get_resource(SpriteAsset, n) if n is not None else None
+                   for n in env_lut]
+
+        return dict(enumerate(surface_lut)), dict(enumerate(env_lut))
+
+    def resolve_luts_for_map(self, the_map: MAMMapAsset) -> Dict[str, Dict[Any, SpriteAsset]]:
+        # TODO: for now we will just return the outdoor environment regardless of the map in use.
+        # find related sprites
+        # srf_sprites = [q for q in self.get_resources(SpriteAsset)
+        #                if "srf" in q.tags and "environment" in q.tags]
+
+        # create ground / surface luts
+        ground_lut, env_lut = self.get_known_outdoor_luts()
+
+        luts_by_name: Dict[str, Dict[Any, SpriteAsset]] = {}
+        luts_by_name["ground"] = ground_lut
+        luts_by_name["env"] = env_lut
+
+        return luts_by_name
+
+    def _bootstrap_maps(self):
+        the_maps = self.load_all_maps()
+
+        for the_map in the_maps:
+            # find sprites needed to render this map
+            tile_luts_by_name = self.resolve_tile_luts_for_map(the_map)
+            luts_by_name = self.resolve_luts_for_map(the_map)
+
+            luts_by_name |= tile_luts_by_name
+            the_map.set_luts(luts_by_name)
+
+        self._resources.extend(the_maps)
 
     def _bootstrap_monsters(self):
         # get the monster configs
@@ -491,6 +608,7 @@ class CCFile:
         print()
 
         return bake_path
+
 
 
 def parse_toc_csv(file_path) -> List[Tuple[str, int, str]]:
