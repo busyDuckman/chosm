@@ -1,6 +1,6 @@
 from PIL import Image
 import helpers.pil_image_helpers as pih
-from chosm.sprite_asset import sprite_from_baked_folder, SpriteAsset, AnimLoop
+from assets.sprite_asset import sprite_from_baked_folder, SpriteAsset, AnimLoop
 
 def get_draw_structs():
     # source https://xeen.fandom.com/wiki/MAZExxxx.DAT_File_Format

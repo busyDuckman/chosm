@@ -12,8 +12,8 @@ from typing import Dict, Any, List, Type, Union, Literal
 
 from slugify import slugify
 
-from chosm.asset_record import AssetRecord
-from chosm.game_constants import AssetTypes, parse_asset_type
+from assets.asset_record import AssetRecord
+from assets.game_constants import AssetTypes, parse_asset_type
 from game_engine.map import Map, load_map_from_dict
 from game_engine.world import World
 from helpers.misc import popo_to_dict, popo_from_dict
@@ -58,6 +58,9 @@ class ResourcePackInfo:
         self.ver: str = "0.1"
         self.description: str = None
         self.created_timestamp: str = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
+        # inclusions
+        self.overrides: List[str] = []  # archetypes, which act as part of this pack, with this packs names taking priority.
+        self.includes: List[str]  = []  # includes which can be used as per: "general_monsters->ice_dragon_027".
 
     def save_info_file(self, base_uri):
         d = popo_to_dict(self)
@@ -105,10 +108,6 @@ class ResourcePack(ResourcePackInfo):
         # resource management
         self._asset_record_lut: Dict[str: AssetRecord] = {}  # look up table by slug
         self._asset_records_by_type: Dict[AssetTypes, Dict[str, AssetRecord]] = {}
-
-        # inclusions
-        self.overrides: List[str]  # archetypes, which act as part of this pack, with this packs names taking priority.
-        self.includes: List[str]  # includes which can be used as per: "general_monsters->ice_dragon_027".
 
         self._overrides: List[ResourcePack] = []
         self._includes: List[ResourcePack] = []

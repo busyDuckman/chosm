@@ -28,7 +28,7 @@ user_router = APIRouter(
 templates = Jinja2Templates(directory="web/templates")
 
 
-@user_router.post("/show_session/")
+@user_router.post("/show_session")
 def show_cookie(response: Response, session_id: Optional[str] = Cookie(default=None, alias="sessionID")):
     d = {"session id": session_id}
 

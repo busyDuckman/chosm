@@ -1,4 +1,4 @@
-from chosm.asset import Asset
+from assets.asset import Asset
 
 
 class SoundFXAsset(Asset):

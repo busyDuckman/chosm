@@ -1,6 +1,6 @@
 from typing import List
 
-from chosm.binary_asset import BinaryAsset
+from assets.binary_asset import BinaryAsset
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError
 
 

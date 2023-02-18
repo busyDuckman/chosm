@@ -1,7 +1,7 @@
 import io
 import logging
 
-from chosm.npc_database_asset import NPCDatabaseAsset
+from assets.npc_database_asset import NPCDatabaseAsset
 from game_engine.dice import Dice, Roll
 from game_engine.game_engine import NPCType, DamageType, NPCBehaviour, Attack
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, RawFile

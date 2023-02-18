@@ -5,8 +5,8 @@ from typing import List, Dict, Any, Tuple
 
 from slugify import slugify
 
-from chosm.map_asset import MapAsset
-from chosm.sprite_asset import SpriteAsset
+from assets.map_asset import MapAsset
+from assets.sprite_asset import SpriteAsset
 from game_engine.map import Map, AssetLut
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, spell_slug, RawFile, Direction
 import helpers.stream_helpers as sh

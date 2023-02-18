@@ -1,0 +1,14 @@
+{
+  "name": "chosm_default",
+  "admin_username": "duckman",
+  "author_info": "Replacement image set for M&M games",
+  "creative_commons": false,
+  "is_private": true,
+  "editor_access_list": [],
+  "viewer_access_list": [],
+  "ver": "0.1",
+  "description": null,
+  "created_timestamp": "2023-02-18T23:06:33+11:00",
+  "overrides": ["dark-cccur-darkside-pc-dos"],
+  "includes": []
+}

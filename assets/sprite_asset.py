@@ -13,8 +13,8 @@ from PIL import Image
 from numpy.lib.index_tricks import RClass
 
 import helpers.pil_image_helpers as pih
-from chosm.asset import Asset
-from chosm.game_constants import AssetTypes, SpriteRoles, parse_sprite_role
+from assets.asset import Asset
+from assets.game_constants import AssetTypes, SpriteRoles, parse_sprite_role
 from helpers.misc import prune_kwargs, SliceDescriber
 
 

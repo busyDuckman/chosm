@@ -7,11 +7,11 @@ import os.path
 from typing import List, Dict, Tuple, Any
 from PIL import Image
 
-from chosm.sprite_asset import AnimLoop, SpriteAsset
+from assets.sprite_asset import AnimLoop, SpriteAsset
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, RawFile
 import helpers.stream_helpers as sh
 import helpers.color as ch
-from chosm.pal_asset import PalAsset
+from assets.pal_asset import PalAsset
 
 
 def read_cell(f, raw_file: RawFile):
