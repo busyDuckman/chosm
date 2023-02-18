@@ -12,8 +12,8 @@ import toml
 from PIL import Image
 from slugify import slugify
 
-from chosm.asset import Asset
-from chosm.game_constants import AssetTypes
+from assets.asset import Asset
+from assets.game_constants import AssetTypes
 from game_engine.i18n.languages import normalise_lang_code, get_supported_languages
 from helpers import pil_image_helpers as pih
 

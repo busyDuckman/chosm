@@ -3,8 +3,8 @@ import os
 
 from PIL import Image
 
-from chosm.asset import Asset
-from chosm.game_constants import AssetTypes
+from assets.asset import Asset
+from assets.game_constants import AssetTypes
 from game_engine.world import World
 
 import helpers.pil_image_helpers as pih

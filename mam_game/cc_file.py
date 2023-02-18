@@ -18,12 +18,12 @@ from slugify import slugify
 from numba import njit
 
 import helpers.stream_helpers as sh
-from chosm.asset import Asset
-from chosm.game_constants import SpriteRoles
-from chosm.map_asset import MapAsset
-from chosm.resource_pack import ResourcePackInfo
-from chosm.sprite_asset import SpriteAsset
-from chosm.world_asset import WorldAsset
+from assets.asset import Asset
+from assets.game_constants import SpriteRoles
+from assets.map_asset import MapAsset
+from assets.resource_pack import ResourcePackInfo
+from assets.sprite_asset import SpriteAsset
+from assets.world_asset import WorldAsset
 from game_engine.map import AssetLut
 from game_engine.world import World
 from mam_game.binary_file import load_bin_file
@@ -33,7 +33,7 @@ from mam_game.map_organiser import combine_map_assets
 from mam_game.map_file_decoder import RawFile, load_map_file, MAMMapAsset
 from mam_game.npc_db_decoder import load_monster_database_file
 from mam_game.pal_file_decoder import load_pal_file, get_default_pal
-from chosm.pal_asset import PalAsset
+from assets.pal_asset import PalAsset
 from mam_game.sprite_file_decoder import load_sprite_file
 
 

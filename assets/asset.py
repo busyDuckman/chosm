@@ -8,7 +8,7 @@ from typing import List
 from PIL import Image
 from slugify import slugify
 
-from chosm.game_constants import AssetTypes
+from assets.game_constants import AssetTypes
 
 
 # AssetRecord:

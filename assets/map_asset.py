@@ -6,9 +6,9 @@ from typing import Dict, Any
 
 from PIL import Image
 
-from chosm.asset import Asset
-from chosm.game_constants import AssetTypes
-from chosm.sprite_asset import SpriteAsset
+from assets.asset import Asset
+from assets.game_constants import AssetTypes
+from assets.sprite_asset import SpriteAsset
 from game_engine.map import Map, load_map_from_dict, AssetLut
 from helpers.misc import my_json_dumps
 

@@ -4,8 +4,8 @@ from typing import List
 
 from PIL import Image
 
-from chosm.asset import Asset
-from chosm.game_constants import AssetTypes
+from assets.asset import Asset
+from assets.game_constants import AssetTypes
 from helpers.color import Color
 from mam_game.mam_constants import MAMFileParseError
 

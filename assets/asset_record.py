@@ -6,8 +6,8 @@ import os
 from os.path import join
 from threading import Lock
 from typing import List, Dict, Any
-from chosm.asset import Asset
-from chosm.game_constants import AssetTypes, parse_asset_type
+from assets.asset import Asset
+from assets.game_constants import AssetTypes, parse_asset_type
 from game_engine.map import load_map_from_dict, Map
 from helpers.why import Why
 
