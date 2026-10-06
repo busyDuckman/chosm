@@ -5,3 +5,20 @@ Parchment stuff:
 
   - canvas frame,  3d,  ((bad art)), ((close up)),((b&w)),((out of frame)) ((writing)) (text)) (illustration)
 
+Ground textures:
+  + a flat field of grass, flat horizon, panoramic, lush
+  - macro, spots, bokeh, reflections, watermark
+
+Water textures:
+  + water, lake, ocean, flat horizon, panoramic
+  + water, lake, ocean, flat horizon, panoramic, digital art, anime, Miyazaki
+  - sky, clouds, trees, beach, island, macro, boat, spots, bokeh, reflections, watermark
+
+  + calm water, lake, ocean, flat horizon, panoramic, game art, digital art, anime
+  - photo, sky, clouds, rocks, aerial, mountains, trees, beach, island, macro, boat, people, spots, bokeh, reflections, watermark
+
+  + ocean, flat horizon, panoramic, calm water, lake, game art, digital art, anime, horizon at top of image.
+  + photo, sky, clouds, rocks, aerial, mountains, trees, beach, island, macro, boat, people, spots, fish, disney, bokeh, reflections, watermark
+
+  +ocean, flat horizon, panoramic, calm water, lake, fantasy art, dark undertones,  game art, digital art, anime, horizon at top of image.
+  -photo, sky, clouds, rocks, aerial, mountains, trees, beach, island, macro, boat, people, spots, fish, disney, bokeh, reflections, watermark

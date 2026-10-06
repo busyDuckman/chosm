@@ -27,6 +27,7 @@ from game_engine.map import Map
 from game_engine.session import Session, SessionManager
 from game_engine.single_vanishing_point_painting import SingleVanishingPointPainting
 from game_engine.world import World
+from game_files.chosm_art.bake import bake
 
 from web.route_user import user_router
 from web.route_pack_managment import packs_router
@@ -49,6 +50,10 @@ async def startup_event():
     # global resource_folder, resource_packs, dynamic_folder, dyna_file_manager, default_svp_composer
     print("CWD: " + os.getcwd())
 
+    # re-bake all custom art.
+    # TODO: remove this line before deployment.
+    bake()
+
     ServerData.default_svp_composer = SingleVanishingPointPainting([], [], size=(1920, 1024),  # not 1080, see rendering_layout.md
                                                         view_dist=6,
                                                         horizon_screen_ratio=0.5,
@@ -59,15 +64,8 @@ async def startup_event():
     ServerData.resource_folder = "game_files/baked"
     assert os.path.exists(ServerData.resource_folder)
 
-    resource_packs = ServerData.resource_packs
+    ServerData.load_resource_packs()
 
-    for d in os.scandir(ServerData.resource_folder):
-        rp = ResourcePack(d.path)
-        resource_packs[rp.name] = rp
-
-    # link dependencies
-    for pack in resource_packs.values():
-        pack.link_dependencies(resource_packs)
 
     # setup dynamic file folder
     ServerData.dynamic_folder = "game_files/dynamic_files"
@@ -350,7 +348,7 @@ async def game_view(request: Request, session_id: Optional[str] = Cookie(default
 
     game_state = session.game_state
     current_map = session.game_state.current_map
-    pack_name = game_state.pack.name
+    pack_name = game_state.pack.slug
     pack = game_state.pack
     # TODO: this loop is needlessly done every frame
     map_lut = {lut.name: {i: pack[slug].idle_animation['class'] if slug is not None else None
