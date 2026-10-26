@@ -25,30 +25,21 @@ to source that material yourself to run the server. To do this copy the
 ## Running the code
 
 Requirements:
-  - Python 3.10 or higher, with all the trimmings.
+  - [uv](https://docs.astral.sh/uv/), which installs the right Python version and all packages.
+  - [just](https://github.com/casey/just) (optional), a command runner for the tasks below.
 
+Setup:
 
-Setup requirements for linux systems: 
-
-
-    sudo apt install python3.10  
-    sudo apt-get install python3.10-distutils
-    python3.10 -m pip install --upgrade pip
-    sudo apt-get install python3.10-dev    
-
-Setup python packages:
-
-    pip install requirements.txt
+    just setup                # uv sync
 
 Extracting data from cc files:
-    
+
     # copy game files into ./game_files/dos/
-    cd mam_game
-    python cc_file.py
+    just bake
 
 Running the web server:
 
-    python -m uvicorn web.chosm:app --reload
+    just serve                # uv run uvicorn web.chosm:app --reload
 
     # Landing page
     http://127.0.0.1:8000    
@@ -58,6 +49,10 @@ Running the web server:
 
     # API testing and doco
     http://127.0.0.1:8000/docs
+
+Running the tests:
+
+    just test
 
 ## Code doco
 

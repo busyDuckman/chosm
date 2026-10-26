@@ -8,7 +8,6 @@ game_files/**/*.cur
 game_files/baked/
 game_files/server_files/
 game_files/dynamic_files/
-scratch-pad/supertokens-test/node_modules/
 tiled_projects/
 .idea/
 env/
@@ -23,4 +22,10 @@ parts/
 sdist/
 var/
 venv/
+.venv/
+venv_wsl/
 __pycache__/
+
+# local secrets
+.env
+.env.*

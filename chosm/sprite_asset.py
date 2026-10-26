@@ -10,7 +10,6 @@ from typing import List, Dict, Tuple, Any
 import imageio
 from slugify import slugify
 from PIL import Image
-from numpy.lib.index_tricks import RClass
 
 import helpers.pil_image_helpers as pih
 from chosm.asset import Asset

@@ -2,7 +2,7 @@
 
 | **Software Area**   | **Actions**                                        | **Code**    | **Notes**                                    |
 |---------------------|----------------------------------------------------|-------------|----------------------------------------------|
-|          Web Server | Edit resources and play game                       | /web        | Currently flask based, will move to fastAPI. |
+|          Web Server | Edit resources and play game                       | /web        | FastAPI based.                               |
 |         Game Engine | Interaction, Maps, Player, AI, Game state, Scripts | /game_engine |                                              |
 | Resource Management | index and maintain resources                       | /chosm      |                                              |
 | Might & Magic       | Transform M&M files to resources                   | /mam_game   | Other game importers would be possible.      |

@@ -23,7 +23,7 @@ def locate_project_base(folders_of_interest):
     for folder in folders_of_interest:
         folder = str(pathlib.Path(folder).absolute())
         for _ in range(3):
-            if isfile(join(folder, 'requirements.txt')):
+            if isfile(join(folder, 'pyproject.toml')):
                 return folder
             folder = str(pathlib.Path(folder).absolute().parent)
 
@@ -45,7 +45,6 @@ def _get_project_m_timestamp() -> int:
 
     msg = f"Expiring dynamic files using project modification time: {datetime.datetime.fromtimestamp(modification_time)}"
     logging.info(msg)
-    print(msg)
 
     return modification_time
 

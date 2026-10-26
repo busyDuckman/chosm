@@ -1,19 +1,15 @@
-import pathlib
-from typing import Callable, Iterator, Optional, Tuple
-from datetime import datetime, timedelta
+import logging
+import os
+from typing import Optional
+from datetime import datetime
 
 import sqlalchemy
-from sqlalchemy import select
-from sqlalchemy import Table, Column, Integer, String, DateTime, Boolean
-from sqlalchemy.orm import declarative_base, Session
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import Column, String, DateTime, Boolean, or_
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-from fastapi_login import LoginManager
 import bcrypt
 
-# from app.db import get_session
-# from app.db.models import Post, User
-# from app.security import hash_password, manager
+log = logging.getLogger(__name__)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -38,10 +34,9 @@ class User(Base):
     language_code   = Column(String, default="ENG", nullable=False)
     is_admin        = Column(Boolean, default=False, nullable=False)
 
-    def can_login(self) -> Tuple[bool, str]:
-        if self.suspended_till is not None:
-            if self.suspended_till < datetime.now():
-                return False
+    def can_login(self) -> bool:
+        if self.suspended_till is not None and self.suspended_till > datetime.now():
+            return False
         if self.deleted or self.banned:
             return False
 
@@ -54,48 +49,63 @@ class User(Base):
 # ----------------------------------------------------------------------------------------------------------------------
 # connect to database and create schema
 # ----------------------------------------------------------------------------------------------------------------------
-db_engine = sqlalchemy.create_engine('sqlite:///game_files/server_files/chosm.db',
-                                     connect_args={"check_same_thread": False},
-                                     echo=True)
+db_url = os.environ.get("CHOSM_DB_URL", "sqlite:///game_files/server_files/chosm.db")
+if db_url.startswith("sqlite:///"):
+    os.makedirs(os.path.dirname(db_url.removeprefix("sqlite:///")) or ".", exist_ok=True)
+db_engine = sqlalchemy.create_engine(db_url, connect_args={"check_same_thread": False})
 Base.metadata.create_all(db_engine)
-ChosmDBSession = sessionmaker(bind=db_engine)
+# expire_on_commit=False, so returned User objects stay readable after their db session closes.
+ChosmDBSession = sessionmaker(bind=db_engine, expire_on_commit=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Controller
 # ----------------------------------------------------------------------------------------------------------------------
 
-# manager = LoginManager(Config.secret, Config.token_url)
-manager = LoginManager("REMOVED", '/login')
-
-def hash_password(plaintext: str):
-    # apparently this is bcrypt, so fair enough.
-    # return manager.pwd_context.hash(plaintext)
-    return bcrypt.hashpw(plaintext.encode(), bcrypt.gensalt())
+def hash_password(plaintext: str) -> str:
+    return bcrypt.hashpw(plaintext.encode(), bcrypt.gensalt()).decode()
 
 
-def verify_password(plaintext: str, hashed: str):
-    # return manager.pwd_context.verify(plaintext, hashed)
+def verify_password(plaintext: str, hashed) -> bool:
+    # older rows stored the hash as bytes
+    if isinstance(hashed, str):
+        hashed = hashed.encode()
     return bcrypt.checkpw(plaintext.encode(), hashed)
 
 
-@manager.user_loader()
+# Checked against when a login names an unknown user, so the response takes as long as a real check.
+_DUMMY_HASH = hash_password("not a real password")
+
+
 def get_user_by_name(name: str) -> Optional[User]:
-    # with ChosmDBSession().begin() as db:
     with ChosmDBSession() as session:
-        user = session.query(User).where(User.username == name).first()
+        return session.query(User).where(User.username == name).first()
+
+
+def authenticate(name_or_email: str, password: str) -> Optional[User]:
+    """
+    Returns the user if the credentials are valid and the account may log in, otherwise None.
+    """
+    with ChosmDBSession() as session:
+        user = session.query(User).where(or_(User.username == name_or_email,
+                                             User.email == name_or_email.lower())).first()
+    if user is None:
+        verify_password(password, _DUMMY_HASH)
+        return None
+    if not verify_password(password, user.pw_hash) or not user.can_login():
+        return None
     return user
 
 
-def create_user(name: str, email: str, password: str) -> User:
-    hashed_pw = hash_password(password)
+def create_user(name: str, email: str, password: str, language_code: str = "ENG") -> User:
+    """
+    Raises sqlalchemy.exc.IntegrityError if the username or email is taken.
+    """
+    user = User(username=name, email=email.lower(), pw_hash=hash_password(password), language_code=language_code)
     with ChosmDBSession() as session:
-        user = User(username=name, email=email, pw_hash=hashed_pw)
-        print("new user: ", user)
         session.add(user)
         session.commit()
-        return User
-    return None
-
+    log.info("New user: %s", user)
+    return user
 
 
 def main():

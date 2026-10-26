@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import logging
 import os
 import struct
@@ -13,7 +12,6 @@ from fastapi import FastAPI, Request, Response, Cookie
 from fastapi.responses import FileResponse, HTMLResponse, ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi_utils.tasks import repeat_every
 from slugify import slugify
 from starlette import status
 from starlette.responses import RedirectResponse, PlainTextResponse
@@ -24,13 +22,15 @@ from chosm.game_constants import AssetTypes
 from chosm.resource_pack import ResourcePack
 from game_engine.game_state import GameState, GameAction
 from game_engine.map import Map
-from game_engine.session import Session, SessionManager
+from game_engine.session import session_manager
 from game_engine.single_vanishing_point_painting import SingleVanishingPointPainting
 from game_engine.world import World
 
-from web.route_user import user_router
+from web.route_user import user_router, set_session_cookie, SESSION_COOKIE
+from web.user_db import authenticate
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 
 # fastAPI data
 app = FastAPI()
@@ -63,7 +63,7 @@ def load_game(user_name) -> GameState:
 @app.on_event("startup")
 async def startup_event():
     global resource_folder, resource_packs, dynamic_folder, dyna_file_manager, default_svp_composer
-    print("CWD: " + os.getcwd())
+    log.info("CWD: %s", os.getcwd())
 
     default_svp_composer = SingleVanishingPointPainting([], [], size=(1920, 1024),  # not 1080, see rendering_layout.md
                                                         view_dist=6,
@@ -72,24 +72,20 @@ async def startup_event():
                                                         bird_eye_vs_worm_eye=0)
 
     resource_folder = "game_files/baked"
-    assert os.path.exists(resource_folder)
+    if not os.path.isdir(resource_folder):
+        raise RuntimeError(f"No baked assets in '{resource_folder}'. Put the game's .cc/.cur files in "
+                           f"game_files/dos/ and run `just bake`.")
 
     for d in os.scandir(resource_folder):
         rp = ResourcePack(d.path)
         resource_packs[rp.name] = rp
 
     dynamic_folder = "game_files/dynamic_files"
-    assert os.path.exists(dynamic_folder)
-    exp_timestamp = datetime.datetime.fromisoformat("2023-02-10").timestamp()
-    dyna_file_manager = DynamicFileManager(dynamic_folder,
-                                           expiration_time_stamp=exp_timestamp)
+    os.makedirs(dynamic_folder, exist_ok=True)
+    # generated files expire when the code base changes
+    dyna_file_manager = DynamicFileManager(dynamic_folder)
 
-    # create an initial session
-    # print(resource_packs)
-    mam5_pack: ResourcePack = resource_packs['dark-cccur-darkside-pc-dos']
-    mam5_world = mam5_pack.load_world("main_world")
-
-    debug_session: Session = Session("test_user", os.urandom(32), GameState(mam5_world, mam5_pack))
+    session_manager.game_loader = load_game
 
     # disable logs the flood the console
     class EndpointFilter(logging.Filter):
@@ -100,23 +96,17 @@ async def startup_event():
     logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 
-@repeat_every(seconds=30)
-def remove_expired_tokens_task() -> None:
-    SessionManager.tick()
-
-
 @app.get("/")
-async def root(request: Request, session_id: Optional[str] = Cookie(default=None, alias="sessionID")):
-    print("Session: " + str(session_id))
+async def root(request: Request, session_id: Optional[str] = Cookie(default=None, alias=SESSION_COOKIE)):
     user_name = None
-    if (session := SessionManager.get_active_session(session_id)) is not None:
+    if (session := session_manager.get_active_session(session_id)) is not None:
         user_name = session.user_name
 
     context = dict(version=chosm_version,
                    request=request,
                    user_name=user_name)
 
-    return templates.TemplateResponse("landing_page.html", context)
+    return templates.TemplateResponse(request, "landing_page.html", context)
 
 
 @app.get("/api/resource-management/packs", response_class=ORJSONResponse)
@@ -264,9 +254,7 @@ async def resource_pack_css_download(request: Request,
     path, is_valid = dyna_file_manager.query(categories, file_name, expiration_time=last_pack_modification)
 
     if not is_valid:
-        print("##########################################################\n")
-        print(f"#         Regenerating {file_name}\n")
-        print("##########################################################\n")
+        log.info("Regenerating %s", file_name)
 
         # find sprites
         if map_name is None:
@@ -302,11 +290,10 @@ async def editor_view(request: Request, pack_name=None, asset_slug=None, sort_on
     # glob_exp = session.get("glob_exp", None)
     if request.method == "POST":
         form_data = await request.form()
-        print("request.form: ", form_data)
         glob_exp = form_data["glob-epr"]
         glob_exp = None if len(glob_exp.strip()) == 0 else glob_exp
         # session["glob_exp"] = glob_exp if glob_exp is not None else ''
-        print("Server POST ->", glob_exp)
+        log.debug("Editor filter: %s", glob_exp)
 
     # print(pack_name, asset_name)
     packs = sorted(list(resource_packs.keys()))
@@ -325,12 +312,11 @@ async def editor_view(request: Request, pack_name=None, asset_slug=None, sort_on
                    resources=resources, asset_slug=asset_slug,
                    request=request)
 
-    return templates.TemplateResponse("editor.html", context)
+    return templates.TemplateResponse(request, "editor.html", context)
 
 
 @app.get("/editor/asset/{pack_name}/{asset_slug}")
 async def edit_asset_view(request: Request, pack_name, asset_slug):
-    print("edit_asset_view")
     pack = resource_packs[pack_name]
     asset_rec = pack[asset_slug]
 
@@ -340,29 +326,27 @@ async def edit_asset_view(request: Request, pack_name, asset_slug):
                    asset_rec=asset_rec,
                    asset_slug=asset_rec.slug)
 
-    return templates.TemplateResponse(f'edit_{asset_rec.asset_type_as_string}.html', context)
+    return templates.TemplateResponse(request, f'edit_{asset_rec.asset_type_as_string}.html', context)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 @app.get("/game/main")
-async def game_view(request: Request, session_id: Optional[str] = Cookie(default=None, alias="sessionID")):
-    session = SessionManager.get_active_session(session_id)
+async def game_view(request: Request, session_id: Optional[str] = Cookie(default=None, alias=SESSION_COOKIE)):
+    session = session_manager.get_active_session(session_id)
 
+    # Developer convenience: dev_login.txt (git ignored) holds a username and password on two lines.
     if session is None and os.path.isfile("dev_login.txt"):
         with open("dev_login.txt", "rt") as f:
-            print("Using developer auto login: dev_login.txt")
-            lines = f.readlines()
-            un = lines[0]
-            pw = lines[1]
-            session_id = SessionManager.create_session(un, load_game=load_game)
-            session = SessionManager.get_active_session(session_id)
-            response = HTMLResponse("Developer auto login of user: " + un + ". Press refresh to continue.")
-            response.set_cookie(key="sessionID", value=session_id)
-            # return a simple response, that sets the session cookie.ground_render_list
+            un, pw = [line.strip() for line in f.readlines()[:2]]
+        if (user := authenticate(un, pw)) is not None:
+            log.info("Using developer auto login: dev_login.txt")
+            response = HTMLResponse("Developer auto login of user: " + user.username + ". Press refresh to continue.")
+            set_session_cookie(request, response, session_manager.create_session(user.username))
             return response
+        log.warning("dev_login.txt has invalid credentials, ignoring it.")
 
     if session is None:
-        return templates.TemplateResponse(f'world_view.html', dict(request=request, session=None))
+        return templates.TemplateResponse(request, f'world_view.html', dict(request=request, session=None))
 
     game_state = session.game_state
     current_map = session.game_state.current_map
@@ -417,19 +401,22 @@ async def game_view(request: Request, session_id: Optional[str] = Cookie(default
                    ground_render_list=ground_render_list,
                    env_render_list=env_render_list)
 
-    return templates.TemplateResponse(f'world_view.html', context)
+    return templates.TemplateResponse(request, f'world_view.html', context)
 
 @app.post("/do_action", response_class=ORJSONResponse)
 async def do_action(request: Request,
-                    session_id: Optional[str] = Cookie(default=None, alias="sessionID")):
-    session = SessionManager.get_active_session(session_id)
+                    session_id: Optional[str] = Cookie(default=None, alias=SESSION_COOKIE)):
+    session = session_manager.get_active_session(session_id)
     if session is None:
-        return ORJSONResponse({"message": "not logged in"}, status_code=status.HTTP_404_NOT_FOUND)
+        return ORJSONResponse({"message": "not logged in"}, status_code=status.HTTP_401_UNAUTHORIZED)
 
     game_state = session.game_state
     data = await request.json()
-    action = GameAction[data.get("action").strip().upper()]
-    print(f"Received action request: session={session_id}, action={action}")
+    try:
+        action = GameAction[str(data.get("action", "")).strip().upper()]
+    except KeyError:
+        return ORJSONResponse({"message": "unknown action"}, status_code=status.HTTP_400_BAD_REQUEST)
+    log.debug("Received action request: user=%s, action=%s", session.user_name, action)
 
     game_state.attempt_to_take_action(action)
 
@@ -459,9 +446,7 @@ async def ground_mask(steps_fwd: int, steps_right: int,
     # is_valid = True
     # regen file
     if not is_valid:
-        print("==========================================================\n")
-        print(f"=         Regenerating {file_name}\n")
-        print("==========================================================\n")
+        log.info("Regenerating %s", file_name)
         svp_composer = SingleVanishingPointPainting([], [], size=(size_x, size_y),
                                                     bird_eye_vs_worm_eye=bird_eye_vs_worm_eye, view_dist=view_dist,
                                                     horizon_screen_ratio=horizon_screen_ratio,

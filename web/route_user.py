@@ -1,26 +1,23 @@
-import datetime
 import logging
-import textwrap
-import traceback
-from operator import itemgetter
+import re
 from typing import Optional
 
-import fastapi
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, Cookie
+from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request, Response
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from fastapi_login.exceptions import InvalidCredentialsException
-from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 from starlette import status
-from starlette.responses import HTMLResponse
 from starlette.templating import Jinja2Templates
 
 from game_engine.i18n.languages import get_supported_languages
-from game_engine.session import SessionManager
-from web.user_db import get_user_by_name, verify_password, manager, create_user
+from game_engine.session import Session, SessionException, session_manager
+from web.user_db import authenticate, create_user, get_user_by_name
 
+log = logging.getLogger(__name__)
+
+SESSION_COOKIE = "sessionID"
+_valid_username = re.compile(r"^[A-Za-z0-9_-]{3,32}$")
+MIN_PASSWORD_LENGTH = 8
 
 user_router = APIRouter(
     prefix="/user"
@@ -28,132 +25,105 @@ user_router = APIRouter(
 templates = Jinja2Templates(directory="web/templates")
 
 
-@user_router.post("/show_session/")
-def show_cookie(response: Response, session_id: Optional[str] = Cookie(default=None, alias="sessionID")):
-    d = {"session id": session_id}
+def set_session_cookie(request: Request, response: Response, session_id: str):
+    # httponly: page scripts can not read the session id.
+    # samesite=lax: other sites can not make the browser POST to us with the cookie attached.
+    # secure: only sent over https (when the site is served over https).
+    response.set_cookie(key=SESSION_COOKIE, value=session_id,
+                        httponly=True, samesite="lax", secure=request.url.scheme == "https",
+                        max_age=int(session_manager.time_out.total_seconds()))
 
-    if (session := SessionManager.get_active_session(session_id)) is not None:
-        d["user_name"] = session.user_name
 
-    d["sessions"] = [str(s) for s in SessionManager._sessions]
+def require_session(session_id: Optional[str] = Cookie(default=None, alias=SESSION_COOKIE)) -> Session:
+    session = session_manager.get_active_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not logged in.")
+    return session
 
-    return d
+
+def _login_page(request: Request, session: Optional[Session], register_error: Optional[str] = None,
+                status_code: int = status.HTTP_200_OK):
+    context = {"request": request,
+               "session": session,
+               "register_error": register_error,
+               "supported_languages": sorted(get_supported_languages(), key=lambda x: x[1].lower())
+               }
+    return templates.TemplateResponse(request, "login.html", context, status_code=status_code)
 
 
 @user_router.get("/login_page")
-def index(request: Request, session_id: Optional[str] = Cookie(default=None, alias="sessionID")):
-    session = SessionManager.get_active_session(session_id)
-    context = {"request": request,
-               "session": session,
-               "supported_languages": sorted(get_supported_languages(), key=lambda x: x[1].lower())
-               }
-
-    return templates.TemplateResponse("login.html", context)
+def index(request: Request, session_id: Optional[str] = Cookie(default=None, alias=SESSION_COOKIE)):
+    return _login_page(request, session_manager.get_active_session(session_id))
 
 
 @user_router.post('/login')
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
+def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     """
-    Logs in the user provided by form_data.username and form_data.password.
+    Logs in the user provided by form_data.username (or email) and form_data.password.
     A session id is stored in a cookie.
-    TODO: need someone who know more about internet security to improve this.
     """
-    print("----------------------------------------------------------")
-    print("----------------------------------------------------------")
-    print("-                    In login form                       -")
-    print("----------------------------------------------------------")
-    print("----------------------------------------------------------")
-    user = get_user_by_name(form_data.username)
+    user = authenticate(form_data.username, form_data.password)
     if user is None:
-        raise InvalidCredentialsException
-
-    if not user.can_login():
-        raise InvalidCredentialsException
-
-    if not verify_password(form_data.password, user.pw_hash):
-        raise InvalidCredentialsException
+        log.info("Failed login: user=%s", form_data.username)
+        return JSONResponse({"detail": "Invalid username or password."}, status_code=status.HTTP_401_UNAUTHORIZED)
 
     try:
-        from web.chosm import load_game
-        print("\n-----------------------------")
-        print("User logging in: user=" + user.username)
-        session_id = SessionManager.create_session(user.username, load_game=load_game)
-        # print("  - all sessions: " + ", ".join([str(s) for s in SessionManager._sessions]))
-        print(f"New Session id created : user={user.username}, session={session_id}")
-        print("-----------------------------\n")
+        session_id = session_manager.create_session(user.username)
+    except SessionException as e:
+        return JSONResponse({"detail": e.user_message}, status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-    except Exception as e:
-        traceback.print_exc()
-        logging.error(f"Error logging in user: user={user.username}, error='{str(e)}'")
-        print(f"Error logging in user: user={user.username}, error='{str(e)}'")
-        print("-----------------------------\n")
-        raise InvalidCredentialsException
-
-    # response = RedirectResponse('/', status_code=status.HTTP_302_FOUND)
-    html = """
-            <script type="text/javascript">;
-            closeNav();
-            location.reload();
-            </script>
-            """
-    html = textwrap.dedent(html)
-    response = HTMLResponse(html)
-    response.set_cookie(key="sessionID", value=session_id)
+    response = JSONResponse({"user_name": user.username})
+    set_session_cookie(request, response, session_id)
     return response
 
 
 @user_router.post('/logout')
-def logout(session_id: Optional[str] = Cookie(default=None, alias="sessionID")):
-    print("----------------------------------------------------------")
-    print("----------------------------------------------------------")
-    print("-                    In logout                           -")
-    print("----------------------------------------------------------")
-    print("----------------------------------------------------------")
-    session = SessionManager.get_active_session(session_id)
-    if session is not None:
-        session.close()
-    return "done"
+def logout(session_id: Optional[str] = Cookie(default=None, alias=SESSION_COOKIE)):
+    session_manager.end_session(session_id)
+    response = JSONResponse({"detail": "Logged out."})
+    response.delete_cookie(SESSION_COOKIE)
+    return response
 
 
 @user_router.post('/register')
-async def register(request: Request):
-    form_data = await request.form()
-    print()
-    print("Register new user:")
-    print("   - form data: ", form_data)
-    username = form_data["username"]
-    email = form_data["email"]
-    pw = form_data["password"]
+def register(request: Request,
+             username: str = Form(),
+             email: str = Form(),
+             password: str = Form(),
+             language: str = Form(default="ENG")):
+    def fail(message: str):
+        return _login_page(request, None, register_error=message, status_code=status.HTTP_400_BAD_REQUEST)
+
+    username = username.strip()
+    if not _valid_username.match(username):
+        return fail("Usernames are 3 to 32 letters, numbers, '-' or '_'.")
+    if "@" not in email:
+        return fail("That does not look like an e-mail address.")
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return fail(f"Passwords must be at least {MIN_PASSWORD_LENGTH} characters.")
+    if language not in {code for code, _ in get_supported_languages()}:
+        language = "ENG"
 
     try:
-        user = create_user(username, email, pw)
-        if user is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user data not valid")
-
-
-        session_id = SessionManager.create_session(user.username)
-        response = fastapi.responses.RedirectResponse('/', status_code=status.HTTP_302_FOUND)
-        response.set_cookie(key="sessionID", value=session_id)
-        return response
-
+        user = create_user(username, email.strip(), password, language_code=language)
+        session_id = session_manager.create_session(user.username)
     except IntegrityError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="username already exists")
+        return fail("That username or e-mail is already registered.")
+    except SessionException as e:
+        return fail(e.user_message)
 
-
-
-
+    response = RedirectResponse("/user/login_page", status_code=status.HTTP_303_SEE_OTHER)
+    set_session_cookie(request, response, session_id)
+    return response
 
 
 @user_router.get('/{username}')
-def read_user(username, active_user=Depends(manager)):
+def read_user(username: str, session: Session = Depends(require_session)):
     """
-    Shows information about the user
+    Shows information about the user, only available to the user themselves.
     """
     user = get_user_by_name(username)
-
-    if user is None or (user.username != active_user.username):
-        raise HTTPException("You shall not pass with out the secret code.")
-
-    # Only allow admins and oneself to access this information
+    if user is None or user.username != session.user_name:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You shall not pass with out the secret code.")
 
     return {"email": user.email, "language": user.language_code, "account_created": user.created}
