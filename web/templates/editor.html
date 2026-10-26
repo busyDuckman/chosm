@@ -49,7 +49,7 @@
               <tr>
                   <td> <label for="glob-epr">Filter</label> </td>
                   <td>
-                    <input type="text" name="glob-epr" id="glob-epr", value="{{ glob_exp }}" style="width: 150px">
+                    <input type="text" name="glob-epr" id="glob-epr" value="{{ glob_exp or '' }}" style="width: 150px">
                   </td>
               </tr>
               <tr>
@@ -101,41 +101,13 @@
 
           {# TODO: I want this iframe to fill out the remaining space, but it's not coperating #}
           <iframe src="{{ url_for('edit_asset_view', pack_name=pack_name, asset_slug=asset_slug) }}"
-                  title="Editor View" scrolling="“no”" frameborder="“0”" width="1200px" height="800px"
+                  title="Editor View" scrolling="no" frameborder="0" width="1200px" height="800px"
           style="float: top">
           </iframe>
       </div>
   {% else %}
-      Todo: summary stats, download, copy, upload new resource, etc.
+      Select a resource from the list to view it.
   {% endif %}
 </div>
-
-
-
-
-<script src="https://code.jquery.com/jquery-3.5.1.js"
-          integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc="
-          crossorigin="anonymous"></script>
-
-  <script type="text/javascript">
-    $(document).on('click','#glob-epr-form',function(e)
-                   {
-      console.log('hello');
-      e.preventDefault();
-      $.ajax({
-        type:'POST',
-        url:'{{ url_for("editor_view", pack_name=pack_name, asset_slug=asset_slug) }}',
-        data:{
-          glob-epr:$("#glob-epr").val()
-        },
-        success:function()
-        {
-          alert('saved');
-        }
-      })
-    });
-  </script>
-
-
 </body>
 </html>

@@ -33,23 +33,13 @@ class _ServerDataMeta(type):
         for pack in self.resource_packs.values():
             pack.refresh(forced=True, other_resource_packs=self.resource_packs)
 
-        chosm_pack: ResourcePack = self.resource_packs['chosm-default']
-        # print()
-        # print(chosm_pack.slug)
-        # print(chosm_pack.keys())
-        # print(chosm_pack["sprite-030-mon"].asset_type)
-        # print(chosm_pack._asset_records_by_type)
-        # print()
-
     def save_game(self, user_name, game_state: GameState):
         pass
 
     def load_game(self, user_name) -> GameState:
-        # TODO: for now just create a new game
-        mam5_pack: ResourcePack = self.resource_packs['dark-cccur-darkside-pc-dos']
+        # TODO: for now just create a new game.
+        # chosm-default overrides the Darkside pack, so the world comes from Darkside but drawn with the new art.
         chosm_pack: ResourcePack = self.resource_packs['chosm-default']
-
-        # chosm_pack.includes.append(mam5_pack)
         world = chosm_pack.load_world("main_world")
         return GameState(world, chosm_pack)
 

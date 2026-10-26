@@ -81,8 +81,8 @@
 
 <div class="parchment_2">
     {% if session is none %}
-{#        <form id="loginForm" action="/user/login" method="post">#}
-        <form id="loginForm">
+        {# submitted by doLogin(), so pressing enter does not send the password in a GET url #}
+        <form id="loginForm" onsubmit="doLogin(); return false;">
             <h1>Login</h1>
             <p id="loginStatus"></p>
             <table>
@@ -95,8 +95,7 @@
                     <td><input class="under_line" id="loginPasswordInput" name="password" placeholder="Password" type="password"></td>
                 </tr>
                 <tr>
-{#                    <td><input id="loginSubmit" type="submit" value="Login"></td>#}
-                    <td><input id="loginSubmit" type="button" value="Login" onclick="doLogin()"></td>
+                    <td><input id="loginSubmit" type="submit" value="Login"></td>
                 </tr>
             </table>
         </form>
@@ -165,7 +164,6 @@
 
 <script>
     function onDone() {
-        {#parent.location.href=parent.location.href#}
         parent.location.reload();
     }
 
@@ -181,90 +179,17 @@
             method: 'POST',
             body: data,
         })
-            .then(resp => {
+            .then(resp => resp.json().then(body => {
                 if (resp.ok) {
                     location.reload();
                 } else {
-                    return resp.json().then(body => {
-                        document.getElementById('loginStatus').textContent = body.detail;
-                    });
+                    document.getElementById('loginStatus').textContent = body.detail;
                 }
-            })
+            }))
             .catch(error => {
                 console.error(error);
             });
     }
-
-      {#ev.preventDefault();#}
-  {#    location.reload()#}
 </script>
 
-{#<script>#}
-{#  const registerSubmit = document.getElementById("registerSubmit");#}
-{#  registerSubmit.onclick = (ev) => {#}
-{#    ev.preventDefault();#}
-{#    const registerForm = document.getElementById("registerForm");#}
-{#    const data = new FormData(registerForm);#}
-{#    // convert formdata to json#}
-{#    let object = {}#}
-{#    data.forEach((value, key) => object[key] = value)#}
-{##}
-{#    // send data to the backend route#}
-{#    fetch("/user/register", {#}
-{#      method: "POST",#}
-{#      body: JSON.stringify(object),#}
-{#      headers: {'Content-Type': 'application/json'}#}
-{#    }).then((response) => response.json())#}
-{#      .then((data) => {#}
-{#        const status = document.getElementById("registerStatus");#}
-{#        status.innerText = data.detail;#}
-{#      })#}
-{#      .catch((err) => {#}
-{#        console.log("Error: ", err)#}
-{#      })#}
-{#  }#}
-{##}
-{#  let token = undefined;#}
-{#  const loginSubmit = document.getElementById("loginSubmit");#}
-{#  loginSubmit.onclick = (ev) => {#}
-{#    ev.preventDefault();#}
-{#    const loginForm = document.getElementById("loginForm")#}
-{#    const data = new FormData(loginForm)#}
-{#    let xhr = new XMLHttpRequest();#}
-{#    xhr.open("POST", "/user/token", true);#}
-{##}
-{#    xhr.onload = (ev) => {#}
-{#      const status = document.getElementById("loginStatus")#}
-{#      const responseData = JSON.parse(xhr.responseText)#}
-{#      if (xhr.status === 200) {#}
-{#        status.innerText = "Successfully logged in, token: " + responseData.access_token;#}
-{#        token = `${responseData.token_type} ${responseData.access_token}`;#}
-{#      } else {#}
-{#        status.innerText = "Error logging in: " + responseData.detail#}
-{#      }#}
-{#    }#}
-{##}
-{#    xhr.send(data)#}
-{#  }#}
-{##}
-{#  const privateRequest = document.getElementById("privateRequest");#}
-{#  privateRequest.onclick = (ev) => {#}
-{#    fetch("/private", {#}
-{#      method: "GET",#}
-{#      headers: {#}
-{#        "Authorization": token#}
-{#      }#}
-{#    })#}
-{#      .then(response => response.json())#}
-{#      .then(data => {#}
-{#        const status = document.getElementById("privateStatus");#}
-{#        if (status.ok) {#}
-{#          status.innerText = data.detail#}
-{#        } else {#}
-{#          status.innerText = data.detail#}
-{#        }#}
-{##}
-{#      })#}
-{#  }#}
-{#</script>#}
 </html>

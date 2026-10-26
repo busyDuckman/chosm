@@ -61,9 +61,11 @@ class GameState:
                 facing = facing.right()
 
         if new_location:
-            can_do_it = self.current_map.can_move_to(x, y, facing)
-            if not can_do_it:
-                return can_do_it
+            # turning on the spot is always allowed, only check squares the party steps onto
+            if (x, y) != self.party.get_pos()[:2]:
+                can_do_it = self.current_map.can_move_to(x, y, facing)
+                if not can_do_it:
+                    return can_do_it
             self.party.set_pos(x, y, facing)
 
         self.current_world.take_turn(new_location)
@@ -81,13 +83,3 @@ class GameState:
             return the_map[x, y]
         else:
             return off_map_value
-
-def main():
-    ga = GameAction("move_forward")
-    print(ga)
-
-if __name__ == '__main__':
-    main()
-
-
-

@@ -117,6 +117,6 @@ def read_user(username: str, session: Session = Depends(require_session)):
     """
     user = get_user_by_name(username)
     if user is None or user.username != session.user_name:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You shall not pass with out the secret code.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You shall not pass without the secret code.")
 
     return {"email": user.email, "language": user.language_code, "account_created": user.created}

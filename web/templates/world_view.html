@@ -3,9 +3,8 @@
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Title</title>
+        <title>CHOSM</title>
         <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='gui/overlay.css') }}"/>
-
     </head>
     <body>
     {%  include 'login_overlay.html' %}
@@ -18,19 +17,15 @@
     </html>
 
 {% else %}
-    {% set map = current_map %}
-    {% set sky_sprite = "sprite-sky-sky-flat" %}
-    {% set sky_class = pack[sky_sprite].idle_animation["class"] %}
-    {% set sky_class = pack[sky_sprite].idle_animation["class"] %}
-
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Title</title>
-        <link href="{{ url_for('get_file', pack_name=pack_name, asset_slug=sky_sprite, file_name="_animation.css") }}"
+        <title>CHOSM</title>
+        {# the sky is not in the map's look up tables, so is not in the map's css bundle #}
+        <link href="{{ url_for('get_file', pack_name=pack_name, asset_slug="sprite-sky-sky-flat", file_name="_animation.css") }}"
               rel="stylesheet">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('resource_pack_css_download', pack_name=pack_name, map_name=map.name) }}"/>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('resource_pack_css_download', pack_name=pack_name, map_name=current_map.name) }}"/>
 
         <style>
             .view {
@@ -60,53 +55,44 @@
             .away_3 {
                 filter: url(#blue-wash);
             }
+
+            .hud {
+                position: absolute;
+                z-index: 2;
+                color: white;
+                font-family: sans-serif;
+                text-shadow: 1px 1px 2px black;
+            }
+
+            .position {
+                top: 1%;
+                right: 2%;
+            }
+
+            .controls {
+                bottom: 2%;
+                left: 2%;
+                opacity: 0.7;
+            }
+
+            .message {
+                bottom: 8%;
+                width: 100%;
+                text-align: center;
+                font-size: 1.4em;
+                transition: opacity 0.5s;
+            }
         </style>
     </head>
     <body class="no_scroll">
 
     <div class='view full_screen no_scroll' style="background: #333333; ">
-      <div class='full_screen no_scroll' style="z-index: 1;">
-        <div class='{{ sky_class }} fill' style="height: 50%; width: 100%;"></div>
-    {#    <div class='sky' style="height: 45%; width: 100%;"></div>#}
-{#          {% for step_f, step_r, gnd_class in ground_render_list %}#}
-{#            <div class='{{ gnd_class }} fill' style="top: 50%; height: 50%; width: 100%;"></div>#}
-{#          {% endfor %}#}
-
-            {% for steps_f, steps_r, ground_class in ground_render_list %}
-                {% set mask_img_url = url_for('ground_mask', steps_fwd=steps_f, steps_right=steps_r) %}
-                <div class='{{  ground_class  }} fill'
-                     style="top: 50%; height: 50%; width: 100%;
-                             -webkit-mask-image: url({{ mask_img_url }});
-                             mask-image: url({{ mask_img_url }});
-                             mask-mode: alpha">
-                </div>
-            {% endfor %}
-
-            {% for bottom_per, left_per, scale, env_class in env_render_list %}
-                {% set env_filter = "away_3" %}
-
-                <div class='{{ env_class }} fill {{ env_filter }}'
-                     style="position: absolute;
-                             bottom: {{ 100 - bottom_per * 100 }}%;
-                             left: {{ left_per * 100 }}%;
-                             height: {{ 75 * scale }}%;
-                             width: {{ 75 * scale }}%;">
-
-                </div>
-
-            {% endfor %}
-
-{#          <div class='{{ map_lut["env"][4] }} fill'#}
-{#                     style="top: 0%; height: 25%; width: 25%;">#}
-{#          </div>#}
-
-          <div style="position: absolute; top: 1%; left: 85%">
-              Pos = ({{ game_state.party.pos_x }}, {{ game_state.party.pos_y }}), direction = {{ game_state.party.facing | string() }}
-          </div>
-
+      <div id="scene" class='full_screen no_scroll' style="z-index: 1;">
+          {% include 'world_scene.html' %}
       </div>
+      <div id="message" class="hud message" style="opacity: 0;"></div>
+      <div class="hud controls">Arrow keys or WASD: move and turn</div>
     </div>
-
 
     <svg>
     <filter id="blue-wash" color-interpolation-filters="sRGB">
@@ -115,44 +101,71 @@
     </svg>
 
     <script>
+      const scene = document.getElementById("scene");
+      const message = document.getElementById("message");
+      const currentMap = {{ current_map.name | tojson }};
+      const keyActions = {
+          ArrowUp: "MOVE_FWD",    w: "MOVE_FWD",
+          ArrowDown: "MOVE_BACK", s: "MOVE_BACK",
+          ArrowLeft: "TURN_LEFT", a: "TURN_LEFT",
+          ArrowRight: "TURN_RIGHT", d: "TURN_RIGHT",
+      };
+      let waitingOnServer = false;
+      let messageTimer = null;
+
+      function showMessage(text) {
+          message.textContent = text;
+          message.style.opacity = 1;
+          clearTimeout(messageTimer);
+          messageTimer = setTimeout(() => message.style.opacity = 0, 2000);
+      }
+
       document.addEventListener("keydown", event => {
-          let party_action = "NA";
-          switch (event.key) {
-              case "ArrowUp":
-                  party_action = "MOVE_FWD"
-                  break;
-              case "ArrowDown":
-                  party_action = "MOVE_BACK"
-                  break;
-              case "ArrowLeft":
-                  party_action = "TURN_LEFT"
-                  break;
-              case "ArrowRight":
-                  party_action = "TURN_RIGHT"
-                  break;
+          const action = keyActions[event.key];
+          // drop key presses (and key repeats) while the last move is still on its way
+          if (action === undefined || waitingOnServer) {
+              return;
           }
+          event.preventDefault();
+          waitingOnServer = true;
 
-          if (party_action != "NA") {
-
-              fetch("/do_action", {
-                  method: "POST",
-                  headers: {"Content-Type": "application/json"},
-                  body: JSON.stringify({"action": party_action})
-              });
-              location.reload();
-          }
+          fetch("/do_action", {
+              method: "POST",
+              headers: {"Content-Type": "application/json"},
+              body: JSON.stringify({"action": action})
+          })
+              .then(resp => {
+                  if (resp.status === 401) {
+                      location.reload();  // session expired, the reload shows the login
+                      return null;
+                  }
+                  return resp.json();
+              })
+              .then(result => {
+                  if (result === null) {
+                      return;
+                  }
+                  if (result.map !== currentMap) {
+                      location.reload();  // a new map needs its own sprite css
+                      return;
+                  }
+                  scene.innerHTML = result.scene;
+                  if (result.message) {
+                      showMessage(result.message);
+                  }
+              })
+              .catch(error => {
+                  console.error(error);
+                  showMessage("Lost contact with the server.");
+              })
+              .finally(() => waitingOnServer = false);
       });
+
+      // fetch every ground tile shape now, so moving around never waits on one
+      {{ ground_masks | tojson }}.forEach(url => { new Image().src = url; });
     </script>
 
     </body>
     </html>
 
 {% endif %}
-
-
-{#<div class='{{  map_lut["ground"][1]  }} fill'#}
-{#                     style="top: 50%; height: 50%; width: 100%;#}
-{#                             -webkit-mask-image: url({{ mask_img_url }});#}
-{#                             mask-image: url({{ mask_img_url }});#}
-{#                             mask-mode: alpha">#}
-{#                </div>#}

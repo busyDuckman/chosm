@@ -3,14 +3,20 @@ from functools import lru_cache
 from PIL import Image, ImageDraw
 import numpy as np
 from typing import List
-from sympy import Point, Line
+
 
 def intersection(tp_line_a, tp_line_b):
-    a = Line(*tp_line_a)
-    b = Line(*tp_line_b)
-    q = a.intersection(b)[0]
-    # without the float(...), this returns sympy.core.numbers.something
-    return float(q.x), float(q.y)
+    """
+    Where two (infinite) lines cross, each line given as two points ((x1, y1), (x2, y2)).
+    Used to be done with sympy, which was ~10x slower and a heavy dependency for one formula.
+    """
+    (x1, y1), (x2, y2) = tp_line_a
+    (x3, y3), (x4, y4) = tp_line_b
+    d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+    if d == 0:
+        raise ValueError("Lines are parallel, they do not intersect.")
+    t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / d
+    return x1 + t * (x2 - x1), y1 + t * (y2 - y1)
 
 
 class SingleVanishingPointPainting:
@@ -81,8 +87,7 @@ class SingleVanishingPointPainting:
 
     @lru_cache()
     def get_tile_polygon(self, steps_fwd, steps_right):
-        # TODO: This takes a unexpectedly long time to compute, I may need to change intersection library.
-        #       For now, as there are only a few possible calls, the output is memoized.
+        # memoized, as there are only a few possible calls
         if steps_right == 0:
             # straddle the centre line
             p_line_1 = self.get_p_line(1, True)
@@ -181,15 +186,3 @@ class SingleVanishingPointPainting:
         gnd_box = (0, horizon_y, gnd_w, horizon_y + gnd_h)
         img = img.crop(gnd_box)
         return img
-
-
-@lru_cache(maxsize=64)
-def get_ground_overlay(steps_fwd, steps_right,
-                       view_dist=5, size=(1280, 720), horizon_screen_ratio=0.5, local_tile_ratio=0.9, bird_eye_vs_worm_eye=0):
-    svp_composer = SingleVanishingPointPainting([], [], size=size,
-                                                bird_eye_vs_worm_eye=bird_eye_vs_worm_eye, view_dist=view_dist,
-                                                horizon_screen_ratio=horizon_screen_ratio, local_tile_ratio=local_tile_ratio)
-
-    svp_composer.draw_mask(steps_fwd, steps_right)
-
-

@@ -13,7 +13,7 @@ class Why:
 
     @staticmethod
     def false(because: str):
-        return Why(True, because)
+        return Why(False, because)
 
     def raise_exception_on_fail(self):
         if not self:

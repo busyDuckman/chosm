@@ -10,14 +10,12 @@ import fnmatch
 from functools import lru_cache
 from typing import Dict, Any, List, Type, Union, Literal
 
-import slugify
 from slugify import slugify
 
 from assets.asset_record import AssetRecord
 from assets.game_constants import AssetTypes, parse_asset_type
 from game_engine.map import Map, load_map_from_dict
 from game_engine.world import World
-from helpers.grouped_dict import GroupingDict
 from helpers.linkable_dict import LinkableDict
 from helpers.misc import popo_to_dict, popo_from_dict
 
@@ -118,14 +116,9 @@ class ResourcePack(ResourcePackInfo):
         super().__init__(None, None, None)
         self._base_uri = base_uri
 
-        # resource management
-        # self._asset_record_lut: Dict[str: AssetRecord] = {}  # look up table by slug
-        # self._asset_records_by_type: Dict[AssetTypes, Dict[str, AssetRecord]] = {}
+        # resource management, a look up table by slug that can also see into the packs this one links to
         self._asset_record_lut: LinkableDict = LinkableDict()
         self._asset_record_lut.tag = self
-
-        # self._overrides: List[ResourcePack] = []
-        # self._includes: List[ResourcePack] = []
 
         # know when to refresh
         self._mtime_info = 0
@@ -166,8 +159,6 @@ class ResourcePack(ResourcePackInfo):
 
             self._asset_record_lut[r.slug] = r
 
-        # self._asset_records_by_type = GroupingDict(self._asset_record_lut, lambda q: q.asset_type)
-
     def refresh(self, forced: bool, other_resource_packs: Dict[str, Any]):
         mtime_info = os.path.getmtime(join(self._base_uri, "info.json"))
         mtime_folder = os.path.getmtime(self._base_uri)
@@ -189,9 +180,6 @@ class ResourcePack(ResourcePackInfo):
             # TODO: what is the criterion for a natural refresh.
             # TODO: new / missing folders
             # TODO, asset may have changed names (and now be in the wrong folder)
-            # if not valid:
-            #     logging.error("Asset not valid: " + valid.why)
-            #     continue
 
     def get_asset_by_slug(self, slug: str) -> AssetRecord:
         return self._asset_record_lut[slug]
@@ -268,10 +256,7 @@ class ResourcePack(ResourcePackInfo):
     def values(self):
         return self._asset_record_lut.values()
 
-    def get(self, key):
-        return self._asset_record_lut.get(key)
-
-    def get(self, key, default):
+    def get(self, key, default=None):
         return self._asset_record_lut.get(key, default)
 
     # I think this is overthinking things
@@ -284,36 +269,6 @@ class ResourcePack(ResourcePackInfo):
         #     self._cached_maps[name] = new_map
         #
         # return self._cached_maps[name]
-
-    # def generate_all_css(self):
-    #     """
-    #     Creates a css file linking to the css code for all assets in this resource pack.
-    #
-    #     There hare hundreds of .css files (one per game sprite, because the animation is done in css).
-    #     Embedding in theo .html response just the .css files needed to render a scene would burden the
-    #     server with extra work and lengthen the html response creating bandwidth overhead. It's also
-    #     complicates the html template logic, to try and figure out all used assets prior
-    #     to rendering, just to build a list of .css imports.
-    #
-    #     This function creates a single .css file that has everything in this asset pack bundled into it.
-    #     :return:
-    #     """
-    #
-    #     # TODO: handle included and overriden files
-    #     # TODO: need a common way to included and overriden files without circular loops.
-    #
-    #     sprites = self.get_assets_by_type(AssetTypes.SPRITE)
-    #     css_files = [sprite.get_file_path("_animation.css") for sprite in sprites.values()]
-    #     # css_files = [str(pathlib.Path(f).absolute()) for f in css_files]
-    #     # f"/download/resource-packs/{pack_name}/by_type/{asset_type}/by_name/{asset_name}/{file_name}"
-    #     print(css_files[0])
-    #     import_statements = [f'@import "{f}";' for f in css_files]
-    #
-    #     css = f"<!-- All sprite animations in the {slugify(self.name)} resource pack -->\n\n"
-    #     css += "\n".join(import_statements)
-    #     css += "\n"
-    #
-    #     return css
 
     def get_modification_time(self) -> datetime.datetime:
         # TODO: This may not work for an updated asset.
@@ -343,7 +298,7 @@ class ResourcePack(ResourcePackInfo):
         map_ids = world_info["map_names"]
         spell_names = world_info["spell_names"]  # ignore for now
         default_map = world_info["default_map"]
-        print(f"found {len(map_ids)} world maps: world=" + name + ", maps=" + ", ".join(map_ids))
+        logging.info(f"found {len(map_ids)} world maps: world=" + name + ", maps=" + ", ".join(map_ids))
 
         all_maps_by_id = [ma.load_map(new_name=ma.name) for ma in self.get_assets_by_type(AssetTypes.MAP).values()]
         all_maps_by_id = {m.name: m for m in all_maps_by_id}

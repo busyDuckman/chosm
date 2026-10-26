@@ -162,8 +162,29 @@ class MapInstance(MapABC):
         # If a door is opened, or chest looted, the changes won't affect the master copy.
         self._map = InstanceTable(base_map._map)
 
+    # Terrain the party can not walk onto, listed by sprite so the rule still holds when a resource pack
+    # re-skins the map. In Might and Magic these needed the swimming / mountaineering skills, but
+    # there is no party skill system here yet.
+    BLOCKING_SPRITES = {
+        "sprite-water-srf-flat":  "Swimming is needed to go that way.",
+        "sprite-dwater-srf-flat": "The water is too deep to cross.",
+        "sprite-mount-wal":       "Mountaineering is needed to go that way.",
+        "sprite-snomnt-wal":      "Mountaineering is needed to go that way.",
+        "sprite-lavamnt-wal":     "Mountaineering is needed to go that way.",
+    }
+
     def can_move_to(self, x: int, y: int, direction: Direction) -> Why:
-        # TODO
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            return Why.false("That is the edge of the map.")
+
+        tile = self[x, y]
+        for layer in ("ground", "env"):
+            lut = self.luts_by_name.get(layer)
+            if lut is None or layer not in tile:
+                continue
+            sprite = lut.get(tile[layer])
+            if sprite in self.BLOCKING_SPRITES:
+                return Why.false(self.BLOCKING_SPRITES[sprite])
         return Why.true()
 
     def get_spawn_info(self):

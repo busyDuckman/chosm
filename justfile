@@ -10,10 +10,13 @@ setup:
     uv sync
     uv run python -m web.user_db
 
+# Bake game assets from ./game_files/dos/ and ./game_files/chosm_art/ into ./game_files/baked/
+bake: _bake-game-files
+    uv run python -m game_files.chosm_art.bake
+
 # cc_file.py uses paths relative to mam_game/, and imports from the project root.
-[doc('Bake game assets from the .cc files in ./game_files/dos/ into ./game_files/baked/')]
 [working-directory: 'mam_game']
-bake $PYTHONPATH=justfile_directory():
+_bake-game-files $PYTHONPATH=justfile_directory():
     uv run python cc_file.py
 
 # Run the web server with auto reload, at http://127.0.0.1:8000

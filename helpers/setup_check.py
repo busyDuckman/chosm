@@ -13,7 +13,7 @@ BAKED_DIR = PROJECT_ROOT / "game_files" / "baked"
 
 # The original game files `just bake` reads (see mam_game/cc_file.py main), and the resource packs it makes.
 REQUIRED_GAME_FILES = ["DARK.CC", "DARK.CUR"]
-REQUIRED_PACKS = ["dark-cccur-darkside-pc-dos"]
+REQUIRED_PACKS = ["dark-cccur-darkside-pc-dos", "chosm-default"]
 
 
 def print_banner(*lines: str):

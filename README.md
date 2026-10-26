@@ -1,8 +1,49 @@
 # CHOSM
 
-**This project is in very early development, and is not yet ready for general use.**
-I am publishing it as some people may want a python port of [OpenXeen](https://github.com/busyDuckman/OpenXeen)
+[![Project Status: Inactive](https://www.repostatus.org/badges/latest/inactive.svg)](https://www.repostatus.org/#inactive)
+[![License: MIT](https://img.shields.io/github/license/busyDuckman/chosm)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)](pyproject.toml)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![uv](https://img.shields.io/badge/uv-managed-de5fe9?logo=uv)](https://docs.astral.sh/uv/)
 
+> [!NOTE]
+> I worked on this project in 2022 and got to about TRL 3.
+> I learnt a few things I wanted to (mostly about web development etc) 
+> and then decided the juice was not worth the squeeze going forward.
+> So I am mothballing it. 
+
+
+# Mothballing tasks performed:
+  - adopt uv over pip
+  - added a justfile
+  - security audit
+  - launch and fix any major issues
+
+
+# Salvageable work:
+  - Python port of the Xeen loaders:
+    - See my other xeen repo [OpenXeen](https://github.com/busyDuckman/OpenXeen)
+    - This hods a python adaption of the Xeen CC file loaders, which is a great leg up 
+      for anyone wanting to work in that area.
+  - The vanishing-point renderer in game_engine/single_vanishing_point_painting.py.
+    It's the actual research idea behind the project, and is vier height and perspective 
+    code advances on what was normal for the 80's/90's.
+  - The dice notation parser in game_engine/dice.py is very handy
+  - observable_dict.py and linkable_dict.py are useful little ADT's fro change notification
+    and mergeable dictionaries. They also have unit tests.
+
+## Screenshots
+
+| Menu |
+|:---:|
+| [![Menu](docs/screenshots/menu_resized.jpg)](docs/screenshots/menu.jpg) |
+
+| Editor | Game |
+|:---:|:---:|
+| [![Editor](docs/screenshots/editor_resized.jpg)](docs/screenshots/editor.jpg) | [![Game](docs/screenshots/game_resized.jpg)](docs/screenshots/game.jpg) |
+
+
+# About 
 This is an experimental project to explore what a modern version of a particular
 type of game engine would look like. 
 
@@ -20,6 +61,7 @@ For research into the rendering method, this project bootstraps itself from the 
 of the "Might and Magic" series of video games. **No game data is included in this repository.**
 To run the server you need your own copy of Might and Magic: Darkside of Xeen; copy its
 DARK.CC and DARK.CUR files into ./game_files/dos/
+
 
 ## Running the code
 
@@ -75,16 +117,10 @@ done via:
 
 
 ## References & Acknowledgments:
-Might and Magic reverse Engineering:
-  - https://xeen.fandom.com/wiki/Xeen_Wiki
-    - David Goldsmith
-    - Mat Taylor
-
-fastAPI
-
-Cool parchment idea:
-  - https://codepen.io/AgnusDei/pen/NWPbOxL
-
-
-
+  - Might and Magic reverse Engineering:
+    - https://xeen.fandom.com/wiki/Xeen_Wiki
+      - David Goldsmith
+      - Mat Taylor
+  - fastAPI (This was my first fast API proj, and I think it's awesome)
+  - Cool parchment idea: https://codepen.io/AgnusDei/pen/NWPbOxL
 

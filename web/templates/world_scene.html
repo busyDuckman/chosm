@@ -1,0 +1,32 @@
+{#  The party's view. Rendered inside world_view.html, and again by /do_action after every move.  #}
+{% set sky_class = pack["sprite-sky-sky-flat"].idle_animation["class"] %}
+
+<div class='{{ sky_class }} fill' style="height: 50%; width: 100%;"></div>
+
+{% if backdrop_class %}
+    <div class='{{ backdrop_class }} fill away_3' style="position: absolute; top: 50%; height: 50%; width: 100%;"></div>
+{% endif %}
+
+{% for steps_f, steps_r, ground_class in ground_render_list %}
+    {% set mask_img_url = url_for('ground_mask', steps_fwd=steps_f, steps_right=steps_r) %}
+    <div class='{{ ground_class }} fill'
+         style="top: 50%; height: 50%; width: 100%;
+                -webkit-mask-image: url({{ mask_img_url }});
+                mask-image: url({{ mask_img_url }});
+                mask-mode: alpha">
+    </div>
+{% endfor %}
+
+{% for bottom_per, left_per, scale, env_class, far_away in env_render_list %}
+    <div class='{{ env_class }} fill {{ "away_3" if far_away }}'
+         style="position: absolute;
+                bottom: {{ 100 - bottom_per * 100 }}%;
+                left: {{ left_per * 100 }}%;
+                height: {{ 75 * scale }}%;
+                width: {{ 75 * scale }}%;">
+    </div>
+{% endfor %}
+
+<div class="hud position">
+    ({{ game_state.party.pos_x }}, {{ game_state.party.pos_y }}) facing {{ game_state.party.facing.name | lower }}
+</div>

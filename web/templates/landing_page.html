@@ -173,7 +173,7 @@
            color:#404040;
         }
 
-       .acknoledement {
+       .acknowledgement {
            position: absolute;
             bottom: 0;
            width: 98%;
@@ -187,7 +187,7 @@
 <span class="console_font" >Centred Horizon Ordered Sprite Montage (CHOSM)</span><br>
 <span class="console_font" >A research project, to explore some rendering ideas.</span><br>
 <span class="console_font">ver: {{ version }}</span><br>
-<a href="https://github.com/busyDuckman/chosm" target=”_blank” class="console_font"> github</a>
+<a href="https://github.com/busyDuckman/chosm" target="_blank" class="console_font"> github</a>
 
 <div class="title">
     CHOSM
@@ -195,25 +195,14 @@
 
 <div class="centered_menu">
     <div class="parchment">
-        <p class="large_font" onclick=gotoPage("game/main/")>
-{#           onclick=gotoPage("{{ url_for('game_view') }}>#}
-            New Game
-    {#        <span class="small_font">Begin your journey.</span>#}
-        </p>
-        <p class="large_font">
-            Continue
+        <p class="large_font" onclick=gotoPage("{{ url_for('game_view') }}")>
+            Play
         </p>
         <p class="large_font" onclick=openNav()>
-            Login
-        </p>
-        <p class="large_font">
-            Register
+            {{ "Account" if user_name else "Login / Register" }}
         </p>
         <p class="large_font" onclick=gotoPage("{{ url_for('editor_view') }}")>
             Editor
-        </p>
-        <p class="large_font">
-            Community
         </p>
 
         {% if user_name %}
@@ -227,7 +216,7 @@
 
 {%  include 'login_overlay.html' %}
 
-<div class="acknoledement">
+<div class="acknowledgement">
     We acknowledge the Ngunnawal people as the traditional custodians of the land on which this game was made.
 </div>
 
@@ -237,7 +226,6 @@
 <script>
 function gotoPage(where) {
     window.location.href = where
-  {#document.getElementById("demo").innerHTML = "Hello World";#}
 }
 
 </script>
