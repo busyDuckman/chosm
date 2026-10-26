@@ -12,8 +12,8 @@ from slugify import slugify
 from PIL import Image
 
 import helpers.pil_image_helpers as pih
-from chosm.asset import Asset
-from chosm.game_constants import AssetTypes, SpriteRoles, parse_sprite_role
+from assets.asset import Asset
+from assets.game_constants import AssetTypes, SpriteRoles, parse_sprite_role
 from helpers.misc import prune_kwargs, SliceDescriber
 
 
@@ -91,7 +91,8 @@ class SpriteAsset(Asset):
         return sprite
 
     def __str__(self):
-        return f"sprite_file File: id={self.file_id} num_cols={len(self.colors)}"
+        anim_list = ", ".join(self.animations.keys())
+        return f"sprite(slug={self.slug}, anims=[{anim_list}])"
 
     def get_type(self) -> AssetTypes:
         return AssetTypes.SPRITE

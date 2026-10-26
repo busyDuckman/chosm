@@ -1,4 +1,4 @@
-from chosm.pal_asset import PalAsset
+from assets.pal_asset import PalAsset
 from helpers.color import Color, color_from_6bit_rgb
 from mam_game.mam_constants import MAMVersion, Platform, MAMFileParseError, RawFile
 

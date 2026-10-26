@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Dict, Tuple
 
-from chosm.asset_record import AssetRecord
-from chosm.resource_pack import ResourcePack
+from assets.asset_record import AssetRecord
+from assets.resource_pack import ResourcePack
 from game_engine.game_engine import PlayerParty
 from game_engine.map import Map, MapInstance
 from helpers.why import Why

@@ -145,3 +145,59 @@ class TestSessionManager(TestCase):
         sm = SessionManager()
         session_id = sm.create_session("someone")
         self.assertNotIn(session_id, str(sm.get_active_session(session_id)))
+
+
+class TestCreateTestUser(TestCase):
+    """
+    The interactive test account setup run by `just setup`, with the terminal mocked.
+    """
+    def run_setup(self, answers, passwords, dev_login_file):
+        from unittest import mock
+        import web.user_db as user_db
+        with mock.patch("sys.stdin.isatty", return_value=True), \
+                mock.patch("builtins.input", side_effect=answers), \
+                mock.patch("getpass.getpass", side_effect=passwords), \
+                mock.patch.object(user_db, "DEV_LOGIN_FILE", dev_login_file), \
+                mock.patch("builtins.print"):
+            user_db.create_test_user_interactive()
+
+    def test_create_and_save_dev_login(self):
+        from pathlib import Path
+        from web.user_db import authenticate
+        dev_login = Path(tempfile.mkdtemp()) / "dev_login.txt"
+
+        # create? username, email (default), save dev login? (default)
+        self.run_setup(["y", "setup_tester", "", ""], ["a good password", "a good password"], dev_login)
+
+        self.assertIsNotNone(authenticate("setup_tester", "a good password"))
+        self.assertEqual(dev_login.read_text().splitlines(), ["setup_tester", "a good password"])
+
+    def test_generated_password_and_retry(self):
+        from pathlib import Path
+        dev_login = Path(tempfile.mkdtemp()) / "dev_login.txt"
+
+        # a too short password is rejected straight away (no confirm), then blank generates one
+        self.run_setup(["y", "gen_tester", "", ""], ["short", ""], dev_login)
+
+        username, password = dev_login.read_text().splitlines()
+        from web.user_db import authenticate
+        self.assertIsNotNone(authenticate(username, password))
+
+    def test_only_the_bad_answer_is_asked_again(self):
+        from pathlib import Path
+        from web.user_db import authenticate
+        dev_login = Path(tempfile.mkdtemp()) / "dev_login.txt"
+        create_user("taken_name", "taken@example.com", "a good password")
+
+        # a bad then a taken username, a taken e-mail, mismatched passwords; each re-asks only that question
+        self.run_setup(["y", "x", "taken_name", "retry_tester", "taken@example.com", "", ""],
+                       ["a good password", "different", "a good password", "a good password"], dev_login)
+
+        self.assertIsNotNone(authenticate("retry_tester", "a good password"))
+        self.assertEqual(dev_login.read_text().splitlines(), ["retry_tester", "a good password"])
+
+    def test_declined(self):
+        from pathlib import Path
+        dev_login = Path(tempfile.mkdtemp()) / "dev_login.txt"
+        self.run_setup(["n"], [], dev_login)
+        self.assertFalse(dev_login.exists())

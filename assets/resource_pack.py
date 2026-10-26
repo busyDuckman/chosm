@@ -10,12 +10,15 @@ import fnmatch
 from functools import lru_cache
 from typing import Dict, Any, List, Type, Union, Literal
 
+import slugify
 from slugify import slugify
 
-from chosm.asset_record import AssetRecord
-from chosm.game_constants import AssetTypes, parse_asset_type
+from assets.asset_record import AssetRecord
+from assets.game_constants import AssetTypes, parse_asset_type
 from game_engine.map import Map, load_map_from_dict
 from game_engine.world import World
+from helpers.grouped_dict import GroupingDict
+from helpers.linkable_dict import LinkableDict
 from helpers.misc import popo_to_dict, popo_from_dict
 
 
@@ -49,6 +52,7 @@ class ResourcePackInfo:
         solve the "info.json" / "ResourcePack instance" chicken/egg situation.
         """
         self.name = name
+        self.slug = None if name is None else slugify(name)
         self.admin_username: str = admin_username
         self.author_info: str = "anon"
         self.creative_commons: bool = creative_commons
@@ -58,6 +62,9 @@ class ResourcePackInfo:
         self.ver: str = "0.1"
         self.description: str = None
         self.created_timestamp: str = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
+        # inclusions
+        self.overrides: List[str] = []  # archetypes, which act as part of this pack, with this packs names taking priority.
+        self.includes: List[str]  = []  # includes which can be used as per: "general_monsters->ice_dragon_027".
 
     def save_info_file(self, base_uri):
         d = popo_to_dict(self)
@@ -65,6 +72,8 @@ class ResourcePackInfo:
 
         with open(info_file, "wt") as f:
             json.dump(d, f, indent=2)
+
+        return info_file
 
     def load_info_file(self, base_uri):
         info_file = join(base_uri, "info.json")
@@ -75,6 +84,13 @@ class ResourcePackInfo:
             d = json.load(f)
 
         popo_from_dict(self, d)
+
+        # prevent a bad info .json doing too much harm
+        if self.name is None:
+            self.name = os.path.split(base_uri)[1]
+
+        if "slug" not in d:
+            self.slug = slugify(self.name)
 
 
 class ResourcePack(ResourcePackInfo):
@@ -103,15 +119,13 @@ class ResourcePack(ResourcePackInfo):
         self._base_uri = base_uri
 
         # resource management
-        self._asset_record_lut: Dict[str: AssetRecord] = {}  # look up table by slug
-        self._asset_records_by_type: Dict[AssetTypes, Dict[str, AssetRecord]] = {}
+        # self._asset_record_lut: Dict[str: AssetRecord] = {}  # look up table by slug
+        # self._asset_records_by_type: Dict[AssetTypes, Dict[str, AssetRecord]] = {}
+        self._asset_record_lut: LinkableDict = LinkableDict()
+        self._asset_record_lut.tag = self
 
-        # inclusions
-        self.overrides: List[str]  # archetypes, which act as part of this pack, with this packs names taking priority.
-        self.includes: List[str]  # includes which can be used as per: "general_monsters->ice_dragon_027".
-
-        self._overrides: List[ResourcePack] = []
-        self._includes: List[ResourcePack] = []
+        # self._overrides: List[ResourcePack] = []
+        # self._includes: List[ResourcePack] = []
 
         # know when to refresh
         self._mtime_info = 0
@@ -120,9 +134,11 @@ class ResourcePack(ResourcePackInfo):
         # load
         self._reload_info_and_assets()
 
-    def link_dependencies(self, other_resource_packs: Dict[str, Any]):
-        self._overrides: List[ResourcePack] = [other_resource_packs[p] for p in self.overrides]
-        self._includes:  List[ResourcePack] = [other_resource_packs[p] for p in self.includes]
+    def _link_dependencies(self, other_resource_packs: Dict[str, Any]):
+        overrides: List[ResourcePack] = [other_resource_packs[p] for p in self.overrides]
+        includes:  List[ResourcePack] = [other_resource_packs[p] for p in self.includes]
+        self._asset_record_lut.overrides = [p._asset_record_lut for p in overrides]
+        self._asset_record_lut.includes = {p.slug: p._asset_record_lut for p in includes}
 
     def _reload_info_and_assets(self):
         if not os.path.exists(self._base_uri):
@@ -134,7 +150,7 @@ class ResourcePack(ResourcePackInfo):
         self._mtime_info = os.path.getmtime(join(self._base_uri, "info.json"))
 
         dirs = [f.path for f in os.scandir(self._base_uri) if f.is_dir()]
-        self._asset_record_lut = {}
+        self._asset_record_lut = LinkableDict()
 
         for folder in dirs:
             info_file = join(folder, "info.json")
@@ -150,8 +166,7 @@ class ResourcePack(ResourcePackInfo):
 
             self._asset_record_lut[r.slug] = r
 
-        self._asset_records_by_type = {t: {q.name: q for q in self._asset_record_lut.values() if q.asset_type == t}
-                                       for t in AssetTypes}
+        # self._asset_records_by_type = GroupingDict(self._asset_record_lut, lambda q: q.asset_type)
 
     def refresh(self, forced: bool, other_resource_packs: Dict[str, Any]):
         mtime_info = os.path.getmtime(join(self._base_uri, "info.json"))
@@ -159,7 +174,11 @@ class ResourcePack(ResourcePackInfo):
 
         if forced or mtime_info != self._mtime_info or mtime_folder != self._mtime_folder:
             self._reload_info_and_assets()
-            self.link_dependencies(other_resource_packs)
+            self._link_dependencies(other_resource_packs)
+
+            self._asset_records_by_type = {t: {q.name: q for q in self._asset_record_lut.values() if q.asset_type == t}
+                                           for t in AssetTypes}
+
             self._mtime_info = mtime_info
             self._mtime_folder = mtime_folder
         else:
@@ -173,7 +192,6 @@ class ResourcePack(ResourcePackInfo):
             # if not valid:
             #     logging.error("Asset not valid: " + valid.why)
             #     continue
-
 
     def get_asset_by_slug(self, slug: str) -> AssetRecord:
         return self._asset_record_lut[slug]
@@ -239,22 +257,22 @@ class ResourcePack(ResourcePackInfo):
         return len(self._asset_record_lut)
 
     def __contains__(self, item):
-        return item in self.info
+        return item in self._asset_record_lut
 
     def keys(self):
-        return self.info.keys()
+        return self._asset_record_lut.keys()
 
     def items(self):
-        return self.info.items()
+        return self._asset_record_lut.items()
 
     def values(self):
-        return self.info.values()
+        return self._asset_record_lut.values()
 
     def get(self, key):
-        return self.info.get(key)
+        return self._asset_record_lut.get(key)
 
     def get(self, key, default):
-        return self.info.get(key, default)
+        return self._asset_record_lut.get(key, default)
 
     # I think this is overthinking things
     # def get_map(self, name):

@@ -16,18 +16,23 @@ from slugify import slugify
 from starlette import status
 from starlette.responses import RedirectResponse, PlainTextResponse
 
-from chosm.asset_record import AssetRecord
-from chosm.dynamic_file_manager import DynamicFileManager
-from chosm.game_constants import AssetTypes
-from chosm.resource_pack import ResourcePack
+from assets.asset_record import AssetRecord
+from game_engine.dynamic_file_manager import DynamicFileManager
+from assets.game_constants import AssetTypes
+from assets.resource_pack import ResourcePack
 from game_engine.game_state import GameState, GameAction
 from game_engine.map import Map
 from game_engine.session import session_manager
 from game_engine.single_vanishing_point_painting import SingleVanishingPointPainting
 from game_engine.world import World
+from game_files.chosm_art.bake import bake
+from helpers import setup_check
 
 from web.route_user import user_router, set_session_cookie, SESSION_COOKIE
+from web.route_pack_managment import packs_router
+from web.server_data import ServerData
 from web.user_db import authenticate
+
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -36,56 +41,39 @@ log = logging.getLogger(__name__)
 app = FastAPI()
 app.mount("/web/static", StaticFiles(directory="web/static"), name="static")
 app.include_router(user_router)
+app.include_router(packs_router)
 templates = Jinja2Templates(directory="web/templates")
-
-# CHOSM data
-resource_folder = ""
-resource_packs: Dict[str, ResourcePack] = {}
-chosm_version = "0.05"
-
-dynamic_folder = ""
-dyna_file_manager: DynamicFileManager = None
-
-default_svp_composer: SingleVanishingPointPainting = None
-
-
-def save_game(user_name, game_state: GameState):
-    pass
-
-
-def load_game(user_name) -> GameState:
-    # TODO: for now just create a new game
-    mam5_pack: ResourcePack = resource_packs['dark-cccur-darkside-pc-dos']
-    mam5_world = mam5_pack.load_world("main_world")
-    return GameState(mam5_world, mam5_pack)
 
 
 @app.on_event("startup")
 async def startup_event():
-    global resource_folder, resource_packs, dynamic_folder, dyna_file_manager, default_svp_composer
     log.info("CWD: %s", os.getcwd())
 
-    default_svp_composer = SingleVanishingPointPainting([], [], size=(1920, 1024),  # not 1080, see rendering_layout.md
+    if not setup_check.check_can_serve():
+        raise SystemExit(1)
+
+    # re-bake all custom art.
+    # TODO: remove this line before deployment.
+    bake()
+
+    ServerData.default_svp_composer = SingleVanishingPointPainting([], [], size=(1920, 1024),  # not 1080, see rendering_layout.md
                                                         view_dist=6,
                                                         horizon_screen_ratio=0.5,
                                                         local_tile_ratio=0.9,
                                                         bird_eye_vs_worm_eye=0)
 
-    resource_folder = "game_files/baked"
-    if not os.path.isdir(resource_folder):
-        raise RuntimeError(f"No baked assets in '{resource_folder}'. Put the game's .cc/.cur files in "
-                           f"game_files/dos/ and run `just bake`.")
+    # load all resource packs
+    ServerData.resource_folder = "game_files/baked"
 
-    for d in os.scandir(resource_folder):
-        rp = ResourcePack(d.path)
-        resource_packs[rp.name] = rp
+    ServerData.load_resource_packs()
 
-    dynamic_folder = "game_files/dynamic_files"
-    os.makedirs(dynamic_folder, exist_ok=True)
-    # generated files expire when the code base changes
-    dyna_file_manager = DynamicFileManager(dynamic_folder)
 
-    session_manager.game_loader = load_game
+    # setup dynamic file folder, generated files expire when the code base changes
+    ServerData.dynamic_folder = "game_files/dynamic_files"
+    os.makedirs(ServerData.dynamic_folder, exist_ok=True)
+    ServerData.dyna_file_manager = DynamicFileManager(ServerData.dynamic_folder)
+
+    session_manager.game_loader = ServerData.load_game
 
     # disable logs the flood the console
     class EndpointFilter(logging.Filter):
@@ -102,7 +90,7 @@ async def root(request: Request, session_id: Optional[str] = Cookie(default=None
     if (session := session_manager.get_active_session(session_id)) is not None:
         user_name = session.user_name
 
-    context = dict(version=chosm_version,
+    context = dict(version=ServerData.chosm_version,
                    request=request,
                    user_name=user_name)
 
@@ -111,9 +99,7 @@ async def root(request: Request, session_id: Optional[str] = Cookie(default=None
 
 @app.get("/api/resource-management/packs", response_class=ORJSONResponse)
 async def manage_packs():
-    global resource_folder, resource_packs
-
-    packs = sorted(list(resource_packs.keys()))
+    packs = sorted(list(ServerData.resource_packs.keys()))
     return ORJSONResponse(packs)
 
 
@@ -128,34 +114,28 @@ async def manage_packs():
 
 @app.get('/api/resource-management/packs/{pack_name}/assets', response_class=ORJSONResponse)
 async def manage_assets(pack_name: str, glob: str = None):
-    global resource_folder, resource_packs
-
-    files = resource_packs[pack_name].list_assets(glob)
+    files = ServerData.resource_packs[pack_name].list_assets(glob)
     files = sorted(list(files))
     return ORJSONResponse(files)
 
 
 @app.get('/api/resource-management/packs/{pack_name}/assets/{asset_name}/files')
 async def manage_asset_files(pack_name, asset_name):
-    global resource_folder, resource_packs
-
-    path = resource_packs[pack_name].get_asset_path(asset_name)
+    path = ServerData.resource_packs[pack_name].get_asset_path(asset_name)
     files = os.listdir(path)
     return ORJSONResponse(files)
 
 
 @app.get("/download/resource-packs/{pack_name}/by_slug/{asset_slug}/{file_name}")
 async def get_file(pack_name, asset_slug, file_name):
-    global resource_folder, resource_packs
-    pack = resource_packs[pack_name]
+    pack = ServerData.resource_packs[pack_name]
     file_path = pack[asset_slug].get_file_path(file_name)
     return FileResponse(path=file_path)
 
 
 @app.get("/download/resource-packs/{pack_name}/by_type/{asset_type}/by_name/{asset_name}/{file_name}")
 async def get_file(pack_name, asset_type, asset_name, file_name):
-    global resource_folder, resource_packs
-    pack = resource_packs[pack_name]
+    pack = ServerData.resource_packs[pack_name]
     file_path = pack[asset_type, asset_name].get_file_path(file_name)
     return FileResponse(path=file_path)
 
@@ -188,7 +168,7 @@ async def load_and_patch_css_file(request: Request, pack_name, asset_slug):
     # print("       rel_path:", rel_path)
     sprite_css_path = os.path.split(sprite_css_url)[0]
 
-    css_file_path = resource_packs[pack_name][asset_slug].get_file_path('_animation.css')
+    css_file_path = ServerData.resource_packs[pack_name][asset_slug].get_file_path('_animation.css')
     old_tokens = ["url('", 'url("']
     new_tokens = [f"url('{sprite_css_path}/", f'url("{sprite_css_path}/']
     with open(css_file_path, "rt") as f:
@@ -239,7 +219,7 @@ async def resource_pack_css_download(request: Request,
     #       If the file is updated, the browser of course is happy with its cache.
     #       But if the file is not updated, the browser hits this endpoint for a new copy.
 
-    pack = resource_packs[pack_name]
+    pack = ServerData.resource_packs[pack_name]
     last_pack_modification = pack.get_modification_time()
 
     # setup where the cached copy will go
@@ -251,7 +231,7 @@ async def resource_pack_css_download(request: Request,
         categories = ["map_css_cache", pack_name]
 
     # check for ached copy
-    path, is_valid = dyna_file_manager.query(categories, file_name, expiration_time=last_pack_modification)
+    path, is_valid = ServerData.dyna_file_manager.query(categories, file_name, expiration_time=last_pack_modification)
 
     if not is_valid:
         log.info("Regenerating %s", file_name)
@@ -270,7 +250,7 @@ async def resource_pack_css_download(request: Request,
         # save cached copy
         with open(path, "wt") as f:
             f.write(css)
-        dyna_file_manager.invalidate_cache(["pack_css_cache"], file_name)
+        ServerData.dyna_file_manager.invalidate_cache(["pack_css_cache"], file_name)
 
     # done
     response = FileResponse(path=path)
@@ -296,11 +276,11 @@ async def editor_view(request: Request, pack_name=None, asset_slug=None, sort_on
         log.debug("Editor filter: %s", glob_exp)
 
     # print(pack_name, asset_name)
-    packs = sorted(list(resource_packs.keys()))
+    packs = sorted(list(ServerData.resource_packs.keys()))
     pack = None
     resources = {}
     if pack_name is not None:
-        pack = resource_packs[pack_name]
+        pack = ServerData.resource_packs[pack_name]
         resources = pack.get_assets(glob_exp)
 
     if sort_on == "name":
@@ -317,7 +297,7 @@ async def editor_view(request: Request, pack_name=None, asset_slug=None, sort_on
 
 @app.get("/editor/asset/{pack_name}/{asset_slug}")
 async def edit_asset_view(request: Request, pack_name, asset_slug):
-    pack = resource_packs[pack_name]
+    pack = ServerData.resource_packs[pack_name]
     asset_rec = pack[asset_slug]
 
     context = dict(request=request,
@@ -350,7 +330,7 @@ async def game_view(request: Request, session_id: Optional[str] = Cookie(default
 
     game_state = session.game_state
     current_map = session.game_state.current_map
-    pack_name = game_state.pack.name
+    pack_name = game_state.pack.slug
     pack = game_state.pack
     # TODO: this loop is needlessly done every frame
     map_lut = {lut.name: {i: pack[slug].idle_animation['class'] if slug is not None else None
@@ -360,7 +340,7 @@ async def game_view(request: Request, session_id: Optional[str] = Cookie(default
     # work out all the sprites needed to render the ground
     ground_render_list = []
     env_render_list = []
-    svp = default_svp_composer
+    svp = ServerData.default_svp_composer
 
     for step_f in reversed(range(svp.view_dist)):
         fov = svp.fov_table[step_f]
@@ -441,7 +421,7 @@ async def ground_mask(steps_fwd: int, steps_right: int,
 
     file_name = f"{txt_fwd}_{txt_right}_{h}.webp"
     fmt = f"{size_x}_{size_y}_{view_dist}_sharp"
-    path, is_valid = dyna_file_manager.query(["ground_mask", fmt], file_name)
+    path, is_valid = ServerData.dyna_file_manager.query(["ground_mask", fmt], file_name)
 
     # is_valid = True
     # regen file
@@ -460,7 +440,7 @@ async def ground_mask(steps_fwd: int, steps_right: int,
         img2 = Image.new("LA", img.size, (255, 255))
         img2.putalpha(img)
         img2.save(path)
-        dyna_file_manager.invalidate_cache(["ground_mask", fmt], file_name)
+        ServerData.dyna_file_manager.invalidate_cache(["ground_mask", fmt], file_name)
 
     # done
     return FileResponse(path=path)

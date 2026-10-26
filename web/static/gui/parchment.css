@@ -6,8 +6,8 @@
 }
 
 @font-face {
-   font-family: "Luminari";
-   src: url('Luminari-Regular.ttf');
+   font-family: "Almendra";
+   src: url('Almendra-Regular.ttf');
 }
 
 
@@ -26,8 +26,8 @@
 /*    height: {{ p_height }}px;*/
 
 /*   {#font-family: "Bilbo Swash Caps", cursive;#}*/
-/*   font-family: "Luminari";*/
-/*   {#font-family: "Luminari"#}*/
+/*   font-family: "Almendra";*/
+/*   {#font-family: "Almendra"#}*/
 /*   {#font: 'Bilbo Swash Caps', cursive;#}*/
 /*   font-size: 50px;*/
 /*   box-shadow: #303030;*/

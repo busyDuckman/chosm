@@ -1,3 +1,6 @@
+import os
+from functools import lru_cache
+
 from PIL import Image, ImageOps, ImageFont, ImageDraw
 import numpy as np
 
@@ -114,6 +117,24 @@ def _append_images(images, mode, direction, bg_col) -> Image.Image:
     return new_im
 
 
+# fonts bundled with the code, so baked images look the same on every platform
+FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
+
+
+@lru_cache()
+def load_font(font_name: str, size: int) -> ImageFont.FreeTypeFont:
+    """
+    Loads a TrueType font by file name: from FONT_DIR, else an installed system font,
+    else Pillow's built-in font.
+    """
+    for candidate in (os.path.join(FONT_DIR, font_name), font_name):
+        try:
+            return ImageFont.truetype(candidate, size)
+        except OSError:
+            pass
+    return ImageFont.load_default(size)
+
+
 def annotate(image: Image.Image,
              top_text: str, top_text_size=16,
              bottom_text: str = None, bottom_text_size=12,
@@ -124,13 +145,13 @@ def annotate(image: Image.Image,
     x_off = min(img.width // 20, 16)
 
     if top_text is not None and len(top_text.strip()) > 0:
-        font = ImageFont.truetype(font_name, top_text_size)
+        font = load_font(font_name, top_text_size)
         box = draw.textbbox((0, 0), top_text, font=font)
         draw.rectangle([(0, 0), (img.width, box[3] + 3)], fill="#60606060")
         draw.text((x_off, 0), top_text, (255, 255, 255), font=font)
 
     if bottom_text is not None and len(bottom_text.strip()) > 0:
-        font = ImageFont.truetype(font_name, bottom_text_size)
+        font = load_font(font_name, bottom_text_size)
         box = draw.textbbox((0, 0), bottom_text, font=font)
         h = box[3] + 4
         draw.rectangle([(0, img.height - h), (img.width, img.height)], fill="#60606060")

@@ -16,11 +16,10 @@ a "Centred Horizon Ordered Sprite Montage" (CHOSM).
 
 This project aims to present its results in a web-browser based MMORPG.
 
-For research purposes and commentary on the methods, this project currently bootstraps
-itself with data from "Might and Magic" series of video games. IANAL, but I believe this 
-constitutes fair use. The bootstrap data is not in this repository, you need
-to source that material yourself to run the server. To do this copy the
-".cc" files from MaM4-5 into ./game_files/dos/
+For research into the rendering method, this project bootstraps itself from the data files
+of the "Might and Magic" series of video games. **No game data is included in this repository.**
+To run the server you need your own copy of Might and Magic: Darkside of Xeen; copy its
+DARK.CC and DARK.CUR files into ./game_files/dos/
 
 ## Running the code
 
@@ -30,7 +29,7 @@ Requirements:
 
 Setup:
 
-    just setup                # uv sync
+    just setup                # uv sync, then offers to create a test user account
 
 Extracting data from cc files:
 

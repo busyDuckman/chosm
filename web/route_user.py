@@ -1,5 +1,4 @@
 import logging
-import re
 from typing import Optional
 
 from fastapi import APIRouter, Cookie, Depends, Form, HTTPException, Request, Response
@@ -11,13 +10,11 @@ from starlette.templating import Jinja2Templates
 
 from game_engine.i18n.languages import get_supported_languages
 from game_engine.session import Session, SessionException, session_manager
-from web.user_db import authenticate, create_user, get_user_by_name
+from web.user_db import authenticate, create_user, get_user_by_name, validate_new_user
 
 log = logging.getLogger(__name__)
 
 SESSION_COOKIE = "sessionID"
-_valid_username = re.compile(r"^[A-Za-z0-9_-]{3,32}$")
-MIN_PASSWORD_LENGTH = 8
 
 user_router = APIRouter(
     prefix="/user"
@@ -95,12 +92,8 @@ def register(request: Request,
         return _login_page(request, None, register_error=message, status_code=status.HTTP_400_BAD_REQUEST)
 
     username = username.strip()
-    if not _valid_username.match(username):
-        return fail("Usernames are 3 to 32 letters, numbers, '-' or '_'.")
-    if "@" not in email:
-        return fail("That does not look like an e-mail address.")
-    if len(password) < MIN_PASSWORD_LENGTH:
-        return fail(f"Passwords must be at least {MIN_PASSWORD_LENGTH} characters.")
+    if (problem := validate_new_user(username, email, password)) is not None:
+        return fail(problem)
     if language not in {code for code, _ in get_supported_languages()}:
         language = "ENG"
 
