@@ -5,6 +5,8 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)](pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![uv](https://img.shields.io/badge/uv-managed-de5fe9?logo=uv)](https://docs.astral.sh/uv/)
+[![tests](https://github.com/busyDuckman/chosm/actions/workflows/tests.yml/badge.svg)](https://github.com/busyDuckman/chosm/actions/workflows/tests.yml)
+
 
 > [!NOTE]
 > I worked on this project in 2022 and got to about TRL 3.
